@@ -174,8 +174,8 @@ EFI_STATUS EFIAPI UefiMain(
   memmap_file->Close(memmap_file);
 
 
-  // ブートローダーからピクセル描画
-  EFI_GRAPHICS_OUTPUT_PROTOCOL* gop;
+  // フレームバッファ情報生成
+  EFI_GRAPHICS_OUTPUT_PROTOCOL* gop; //後でカーネルに渡す
   OpenGOP(image_handle, &gop);
   Print(L"Resolution: %ux%u, Pixel Format: %s, %u pixels/line\n",
     gop->Mode->Info->HorizontalResolution,
@@ -188,11 +188,6 @@ EFI_STATUS EFIAPI UefiMain(
     gop->Mode->FrameBufferBase + gop->Mode->FrameBufferSize,
     gop->Mode->FrameBufferSize
   );
-
-  UINT8* frame_buffer = (UINT8*)gop->Mode->FrameBufferBase;
-  for(UINTN i = 0; i < gop->Mode->FrameBufferSize; ++i){
-    frame_buffer[i] = 255;
-  }
 
 
   // カーネルファイルを読み込む
@@ -240,9 +235,9 @@ EFI_STATUS EFIAPI UefiMain(
   // カーネルを起動
   UINT64 entry_addr = *(UINT64*)(kernel_base_addr + 24); //24とは？→ ELF形式の仕様で決まっているっぽい（p79参照）
 
-  typedef void EntryPointType(void);
+  typedef void EntryPointType(UINT64, UINT64);
   EntryPointType* entry_point = (EntryPointType*)entry_addr;
-  entry_point();
+  entry_point(gop->Mode->FrameBufferBase, gop->Mode->FrameBufferSize);
 
 
 
