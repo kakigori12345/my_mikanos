@@ -53,7 +53,7 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
 
   // フォント描画
   WriteAscii(*pixel_writer, 50,50, 'A', {0,0,0});
-  WriteAscii(*pixel_writer, 100,50, 'A', {0,0,0});
+  WriteAscii(*pixel_writer, 100,50, 'D', {0,0,0});
 
 
   while(1) __asm__("hlt");
