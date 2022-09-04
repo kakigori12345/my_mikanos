@@ -7,6 +7,9 @@ disk.img
 # Maybe Unused
 .vscode/
 
+# Other Folders
+tools/
+hankaku.*
 
 
 
