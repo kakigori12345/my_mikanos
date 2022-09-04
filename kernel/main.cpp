@@ -65,12 +65,62 @@ public:
 };
 
 
+//--------------------
+// フォント関連
+//--------------------
+const uint8_t kFontA[16] = {
+  0b00000000, //
+  0b00011000, //    **
+  0b00011000, //    **
+  0b00011000, //    **
+  0b00011000, //    **
+  0b00100100, //   *  *
+  0b00100100, //   *  *
+  0b00100100, //   *  *
+  0b00100100, //   *  *
+  0b01111110, //  ******
+  0b01000010, //  *    *
+  0b01000010, //  *    *
+  0b01000010, //  *    *
+  0b11100111, // ***  ***
+  0b00000000, //
+  0b00000000, //
+};
+
+void WriteAscii(PixelWriter& writer, int x, int y, char c, const PixelColor& color) {
+  const uint8_t* fontData = nullptr;
+  switch(c){
+    case 'A':
+      fontData = kFontA;
+      break;
+    default:
+      //フォントがない
+      break;
+  }
+  if(fontData == nullptr){
+    return;
+  }
+
+  for(int dy = 0; dy < 16; ++dy){
+    for(int dx = 0; dx < 16; ++dx){
+      if((fontData[dy] << dx) & 0x80u){
+        writer.Write(x + dx, y + dy, color);
+      }
+    }
+  }
+}
+
+
 //----------------
 // グローバル変数
 //----------------
 char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
 PixelWriter* pixel_writer;
 
+
+//----------------
+// エントリポイント
+//----------------
 extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
   switch(frame_buffer_config.pixel_format) {
     case kPixelRGBResv8BitPerColor:
@@ -89,11 +139,17 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
     }
   }
 
+  // 四角形描画
   for(int x = 0; x < 200; ++x) {
     for(int y = 0; y < 100; ++y) {
       pixel_writer->Write(x, y, {0, 255, 0});
     }
   }
+
+  // フォント描画
+  WriteAscii(*pixel_writer, 50,50, 'A', {0,0,0});
+  WriteAscii(*pixel_writer, 58,50, 'A', {0,0,0});
+
 
   while(1) __asm__("hlt");
 }
