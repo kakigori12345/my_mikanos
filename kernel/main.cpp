@@ -11,8 +11,10 @@
 #include "font.hpp"
 #include "console.hpp"
 #include "pci.hpp"
+#include "interrupt.hpp"
 #include "logger.hpp"
 #include "error.hpp"
+#include "asmfunc.h"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -38,14 +40,14 @@ void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
 // デスクトップ
 const PixelColor kDesktopBGColor{45, 118, 237};
 const PixelColor kDesktopFGColor{255, 255, 255};
+// XHCI
+char xhc_buf[sizeof(usb::xhci::Controller)];
+usb::xhci::Controller* xhc;
 
 
 //------------------
 // 汎用関数
 //------------------
-void operator delete(void* obj) noexcept {
-}
-
 int printk(const char* format, ...){
   va_list ap;
   int result;
@@ -78,6 +80,17 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
   pci::WriteConfReg(xhc_dev, 0xd0, ehci2xhci_ports); // XUSB2PR
   Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n",
       superspeed_ports, ehci2xhci_ports);
+}
+
+__attribute((interrupt))
+void IntHandlerXHCI(InterruptFrame* frame) {
+  while(xhc->PrimaryEventRing()->HasFront()){
+    if(auto err = ProcessEvent(*xhc)){
+      Log(kError, "Error while ProcessEvent: %s at %s:%d\n",
+        err.Name(), err.File(), err.Line());
+    }
+  }
+  NotifyEndOfInterrupt();
 }
 
 
@@ -157,17 +170,31 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
       xhc_dev->bus, xhc_dev->device, xhc_dev->function);
   }
 
+
+  // 割り込みベクタ0x40を設定してIDTをCPUに登録する
+  const uint16_t cs = GetCS();
+  SetIDTEntry(idt[InterruptVector::kXHCI], MakeIDTAttr(DescriptorType::kInterruptGate, 0),
+    reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
+  LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+
+
+  // MSI 割り込みを有効化する
+  const uint8_t bsp_local_apic_id = *reinterpret_cast<const uint32_t*>(0xfee00020) >> 24;
+  pci::ConfigureMSIFixedDestination (
+    *xhc_dev, bsp_local_apic_id,
+    pci::MSITriggerMode::kLevel, pci::MSIDeliveryMode::kFixed,
+    InterruptVector::kXHCI, 0
+  );
+
   
   // xHC のレジスタ群が配置されているメモリアドレスを取得する
-  SetLogLevel(kDebug);
+  //SetLogLevel(kDebug);
   const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
   Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
   const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);
   Log(kDebug, "xHC mmio_base = %08lx\n", xhc_mmio_base);
 
-
   // xHC の初期化と起動
-  SetLogLevel(kInfo);
   usb::xhci::Controller xhc{xhc_mmio_base};
 
   if(0x8086 == pci::ReadVendorId(*xhc_dev)){
@@ -181,6 +208,8 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
   Log(kInfo, "xHC starting\n");
   xhc.Run();
 
+  ::xhc = &xhc;
+  __asm__("sti");
 
   // USB ポートを調べて接続済みポートの設定を行う
   usb::HIDMouseDriver::default_observer = MouseObserver;
@@ -198,14 +227,8 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
     }
   }
 
-  while(1) {
-    if(auto err = ProcessEvent(xhc)){
-      Log(kError, "Error while ProcessEvent: %s at %s:%d\n",
-        err.Name(), err.File(), err.Line());
-    }
-  }
 
-
+  // 無限ループに入っても割り込み処理はできる
   while(1) __asm__("hlt");
 }
 
