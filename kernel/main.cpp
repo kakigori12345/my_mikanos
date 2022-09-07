@@ -15,6 +15,7 @@
 #include "logger.hpp"
 #include "error.hpp"
 #include "asmfunc.h"
+#include "queue.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -40,9 +41,6 @@ void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
 // デスクトップ
 const PixelColor kDesktopBGColor{45, 118, 237};
 const PixelColor kDesktopFGColor{255, 255, 255};
-// XHCI
-char xhc_buf[sizeof(usb::xhci::Controller)];
-usb::xhci::Controller* xhc;
 
 
 //------------------
@@ -82,14 +80,22 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
       superspeed_ports, ehci2xhci_ports);
 }
 
+
+// 割り込みハンドラ
+// XHCI
+usb::xhci::Controller* xhc;
+
+struct Message {
+  enum Type {
+    kInterruptXHCI,
+  } type;
+};
+
+ArrayQueue<Message>* main_queue;
+
 __attribute((interrupt))
 void IntHandlerXHCI(InterruptFrame* frame) {
-  while(xhc->PrimaryEventRing()->HasFront()){
-    if(auto err = ProcessEvent(*xhc)){
-      Log(kError, "Error while ProcessEvent: %s at %s:%d\n",
-        err.Name(), err.File(), err.Line());
-    }
-  }
+  main_queue->Push(Message{Message::kInterruptXHCI});
   NotifyEndOfInterrupt();
 }
 
@@ -97,7 +103,10 @@ void IntHandlerXHCI(InterruptFrame* frame) {
 //----------------
 // エントリポイント
 //----------------
-extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
+extern "C" void KernelMain(
+  const FrameBufferConfig& frame_buffer_config
+) 
+{
   // 初期化
   // ピクセルライター
   switch(frame_buffer_config.pixel_format) {
@@ -141,6 +150,11 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
   mouse_cursor = new(mouse_cursor_buf) MouseCursor{
     pixel_writer, kDesktopBGColor, {300, 200}
   };
+
+  // キュー
+  std::array<Message, 32> main_queue_data;
+  ArrayQueue<Message> main_queue{main_queue_data};
+  ::main_queue = &main_queue;
 
   // デバイスを列挙する
   auto err = pci::ScanAllBus();
@@ -224,6 +238,33 @@ extern "C" void KernelMain(const FrameBufferConfig& frame_buffer_config) {
           err.Name(), err.File(), err.Line());
         continue;
       }
+    }
+  }
+
+
+  // メッセージ処理ループ
+  while(true) {
+    // キューからメッセージを取り出す
+    __asm__("cli"); //割り込み無効化
+    if(main_queue.Count() == 0) {
+      __asm__("sti\n\thlt");
+      continue;
+    }
+    Message msg = main_queue.Front();
+    main_queue.Pop();
+    __asm__("sti"); //割り込み有効化
+
+    switch(msg.type) {
+    case Message::kInterruptXHCI:
+      while(xhc.PrimaryEventRing()->HasFront()){
+        if(auto err = ProcessEvent(xhc)){
+          Log(kError, "Error while ProcessEvent: %s at %s:%d\n",
+            err.Name(), err.File(), err.Line());
+        }
+      }
+      break;
+    default:
+      Log(kError, "Unknown message type: %d\n", msg.type);
     }
   }
 
