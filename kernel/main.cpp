@@ -16,6 +16,7 @@
 #include "error.hpp"
 #include "asmfunc.h"
 #include "queue.hpp"
+#include "memory_map.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -104,7 +105,8 @@ void IntHandlerXHCI(InterruptFrame* frame) {
 // エントリポイント
 //----------------
 extern "C" void KernelMain(
-  const FrameBufferConfig& frame_buffer_config
+  const FrameBufferConfig& frame_buffer_config,
+  const MemoryMap& memory_map
 ) 
 {
   // 初期化
@@ -145,6 +147,33 @@ extern "C" void KernelMain(
   console = new (console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
   printk("Welcome to My OS desu\n");
   SetLogLevel(kWarn);
+
+   
+  // メモリマップの中身を出力する
+  const std::array available_memory_types {
+    MemoryType::kEfiBootServicesCode,
+    MemoryType::kEfiBootServicesData,
+    MemoryType::kEfiConventionalMemory,
+  };
+
+  printk("memory_map: %p\n", &memory_map);
+  for(uintptr_t itr = reinterpret_cast<uintptr_t>(memory_map.buffer);
+      itr < reinterpret_cast<uintptr_t>(memory_map.buffer) + memory_map.map_size;
+      itr += memory_map.descriptor_size)
+  {
+    auto desc = reinterpret_cast<MemoryDescriptor*>(itr);
+    for(int i = 0; i < available_memory_types.size(); ++i) {
+      if(desc->type == available_memory_types[i]) {
+        printk("type = %u, phys = %08lx - %08lx, pages = %lu, attr = %080x\n",
+          desc->type,
+          desc->physical_start,
+          desc->physical_start + desc->number_of_pages * 4096 - 1,
+          desc->attribute
+        );
+      }
+    }
+  }
+
 
   // マウスカーソル
   mouse_cursor = new(mouse_cursor_buf) MouseCursor{
@@ -241,7 +270,7 @@ extern "C" void KernelMain(
     }
   }
 
-
+ 
   // メッセージ処理ループ
   while(true) {
     // キューからメッセージを取り出す
