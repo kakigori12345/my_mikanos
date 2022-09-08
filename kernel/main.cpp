@@ -100,15 +100,19 @@ void IntHandlerXHCI(InterruptFrame* frame) {
   NotifyEndOfInterrupt();
 }
 
+alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 
 //----------------
 // エントリポイント
 //----------------
-extern "C" void KernelMain(
-  const FrameBufferConfig& frame_buffer_config,
-  const MemoryMap& memory_map
+extern "C" void KernelMainNewStack(
+  const FrameBufferConfig& frame_buffer_config_ref,
+  const MemoryMap& memory_map_ref
 ) 
 {
+  FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
+  MemoryMap memory_map{memory_map_ref};
+
   // 初期化
   // ピクセルライター
   switch(frame_buffer_config.pixel_format) {
