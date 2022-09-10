@@ -11,6 +11,10 @@ Layer::Layer(unsigned int id)
 {
 }
 
+unsigned int Layer::ID() const{
+   return id_; 
+}
+
 Layer& Layer::SetWindow(const std::shared_ptr<Window>& window){
   window_ = window;
   return *this;
@@ -86,6 +90,7 @@ void LayerManager::UpDown(unsigned int id, int new_height){
   // 元々スタックに積まれてなかったのでそのまま挿入する
   if(old_pos == layer_stack_.end()){
     layer_stack_.insert(new_pos, layer);
+    return;
   }
 
   // 元々スタックに積まれていた

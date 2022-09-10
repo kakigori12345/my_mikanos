@@ -138,7 +138,7 @@ extern "C" void KernelMainNewStack(
   console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
   console->SetWriter(pixel_writer);
   printk("Welcome to My OS desu\n");
-  SetLogLevel(kDebug);
+  SetLogLevel(kInfo);
 
 
   // セグメンテーション設定

@@ -10,7 +10,7 @@
 class Layer {
   public:
     Layer(unsigned int id = 0);
-    unsigned int ID() const { return id_; }
+    unsigned int ID() const;
 
     Layer& SetWindow(const std::shared_ptr<Window>& window);
     std::shared_ptr<Window> GetWindow() const;
