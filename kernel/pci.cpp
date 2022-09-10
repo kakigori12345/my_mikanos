@@ -226,7 +226,7 @@ namespace pci {
       return ScanBus(0);
     }
 
-    for(uint8_t functionIdx = 1; functionIdx < 8; ++ functionIdx){
+    for(uint8_t functionIdx = 0; functionIdx < 8; ++ functionIdx){
       if(ReadVendorId(0, 0, functionIdx) == 0xffffu){
         continue;
       }

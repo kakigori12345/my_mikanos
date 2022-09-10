@@ -9,8 +9,6 @@ namespace {
   const uint64_t kPageSize2M = 512 * kPageSize4K;
   const uint64_t kPageSize1G = 512 * kPageSize2M;
 
-  const uint64_t kPageDirectoryCount = 64;
-
   alignas(kPageSize4K) std::array<uint64_t, 512> pml4_table;
   alignas(kPageSize4K) std::array<uint64_t, 512> pdp_table;
   alignas(kPageSize4K) std::array<std::array<uint64_t, 512>, kPageDirectoryCount> page_directory;

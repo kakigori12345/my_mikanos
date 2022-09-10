@@ -100,7 +100,7 @@ struct Message {
 
 ArrayQueue<Message>* main_queue;
 
-__attribute((interrupt))
+__attribute__((interrupt))
 void IntHandlerXHCI(InterruptFrame* frame) {
   main_queue->Push(Message{Message::kInterruptXHCI});
   NotifyEndOfInterrupt();
@@ -260,7 +260,6 @@ extern "C" void KernelMainNewStack(
   xhc.Run();
 
   ::xhc = &xhc;
-  __asm__("sti");
 
   // USB ポートを調べて接続済みポートの設定を行う
   usb::HIDMouseDriver::default_observer = MouseObserver;
@@ -313,7 +312,7 @@ extern "C" void KernelMainNewStack(
   layer_manager->UpDown(mouse_layer_id, 1);
   layer_manager->Draw();
 
- Log(kDebug, "loop\n");
+  Log(kDebug, "loop\n");
   // メッセージ処理ループ
   while(true) {
     // キューからメッセージを取り出す
@@ -339,10 +338,6 @@ extern "C" void KernelMainNewStack(
       Log(kError, "Unknown message type: %d\n", msg.type);
     }
   }
-
-
-  // 無限ループに入っても割り込み処理はできる
-  while(1) __asm__("hlt");
 }
 
 extern "C" void __cxa_pure_virtual() {
