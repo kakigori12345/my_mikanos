@@ -2,8 +2,8 @@
 #include <cstddef>
 #include <cstdio>
 
-// #include <numeric>
-// #include <vector>
+#include <numeric>
+#include <vector>
 
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
@@ -20,6 +20,8 @@
 #include "segment.hpp"
 #include "paging.hpp"
 #include "memory_manager.hpp"
+#include "window.hpp"
+#include "layer.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -36,15 +38,14 @@ PixelWriter* pixel_writer;
 // コンソール
 char console_buf[sizeof(Console)];
 Console* console;
+
 // マウスカーソル
-char mouse_cursor_buf[sizeof(MouseCursor)];
-MouseCursor* mouse_cursor;
+unsigned int mouse_layer_id;
 void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
-  mouse_cursor->MoveRelative({displacement_x, displacement_y});
+  layer_manager->MoveRelative(mouse_layer_id, {displacement_x, displacement_y});
+  layer_manager->Draw();
 }
-// デスクトップ
-const PixelColor kDesktopBGColor{45, 118, 237};
-const PixelColor kDesktopFGColor{255, 255, 255};
+
 // メモリマネージャー
 char memory_manager_buf[sizeof(BitmapMemoryManager)];
 BitmapMemoryManager* memory_manager;
@@ -115,17 +116,6 @@ extern "C" void KernelMainNewStack(
   const MemoryMap& memory_map_ref
 ) 
 {
-  // セグメンテーション設定
-  SetupSegments();
-
-  const uint16_t kernel_cs = 1 << 3;
-  const uint16_t kernel_ss = 2 << 3;
-  SetDSAll(0);
-  SetCSSS(kernel_cs, kernel_ss);
-
-  SetupIdentityPageTable();
-
-
   FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
   MemoryMap memory_map{memory_map_ref};
 
@@ -141,34 +131,27 @@ extern "C" void KernelMainNewStack(
         BGRResv8BitPerColorPixelWriter{frame_buffer_config};
       break;
   }
-  
-  // デスクトップ描画
-  const int kFrameWidth = frame_buffer_config.horizontal_resolution; 
-  const int kFrameHeight = frame_buffer_config.vertical_resolution; 
 
-  FillRectangle(*pixel_writer, 
-                {0,0},                   
-                {kFrameWidth, kFrameHeight - 50}, 
-                kDesktopBGColor);
-  FillRectangle(*pixel_writer, 
-                {0, kFrameHeight - 50},  
-                {kFrameWidth, 50},                
-                {1,8,17});
-  FillRectangle(*pixel_writer, 
-                {0, kFrameHeight - 50},  
-                {kFrameWidth/5, 50},              
-                {80, 80, 80});
-  DrawRectangle(*pixel_writer, 
-                {10, kFrameHeight - 40},
-                {30, 30},                         
-                {160, 160, 160});
+  DrawDesktop(*pixel_writer);
 
   // コンソール
-  console = new (console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
+  console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
+  console->SetWriter(pixel_writer);
   printk("Welcome to My OS desu\n");
-  SetLogLevel(kInfo);
+  SetLogLevel(kDebug);
 
-  
+
+  // セグメンテーション設定
+  SetupSegments();
+
+  const uint16_t kernel_cs = 1 << 3;
+  const uint16_t kernel_ss = 2 << 3;
+  SetDSAll(0);
+  SetCSSS(kernel_cs, kernel_ss);
+
+  SetupIdentityPageTable();
+
+
   // メモリ
   ::memory_manager = new(memory_manager_buf) BitmapMemoryManager;
 
@@ -178,7 +161,7 @@ extern "C" void KernelMainNewStack(
       itr < memory_map_base + memory_map.map_size;
       itr += memory_map.descriptor_size)
   {
-    auto desc = reinterpret_cast<MemoryDescriptor*>(itr);
+    auto desc = reinterpret_cast<const MemoryDescriptor*>(itr);
     if(available_end < desc->physical_start) {
       memory_manager->MarkAllocated(
         FrameID{available_end / kBytesPerFrame},
@@ -207,11 +190,6 @@ extern "C" void KernelMainNewStack(
     exit(1);
   }
 
-  // マウスカーソル
-  mouse_cursor = new(mouse_cursor_buf) MouseCursor{
-    pixel_writer, kDesktopBGColor, {300, 200}
-  };
-
   // キュー
   std::array<Message, 32> main_queue_data;
   ArrayQueue<Message> main_queue{main_queue_data};
@@ -223,7 +201,7 @@ extern "C" void KernelMainNewStack(
 
   for(int i = 0; i < pci::num_device; ++i) {
     const auto& dev = pci::devices[i];
-    auto vendor_id = pci::ReadVendorId(dev.bus, dev.device, dev.function);
+    auto vendor_id = pci::ReadVendorId(dev);
     auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
     Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n",
       dev.bus, dev.device, dev.function,
@@ -247,9 +225,8 @@ extern "C" void KernelMainNewStack(
 
 
   // 割り込みベクタ0x40を設定してIDTをCPUに登録する
-  const uint16_t cs = GetCS();
   SetIDTEntry(idt[InterruptVector::kXHCI], MakeIDTAttr(DescriptorType::kInterruptGate, 0),
-    reinterpret_cast<uint64_t>(IntHandlerXHCI), cs);
+    reinterpret_cast<uint64_t>(IntHandlerXHCI), kernel_cs);
   LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
 
 
@@ -301,7 +278,42 @@ extern "C" void KernelMainNewStack(
     }
   }
 
- 
+  // 2枚のレイヤを生成する  
+  const int kFrameWidth = frame_buffer_config.horizontal_resolution; 
+  const int kFrameHeight = frame_buffer_config.vertical_resolution; 
+  // バックグラウンドレイヤ
+  auto bgwindow = std::make_shared<Window>(kFrameWidth, kFrameHeight);
+  auto bgwriter = bgwindow->Writer();
+  Log(kDebug, "mouse layer\n");
+  DrawDesktop(*bgwriter);
+  console->SetWriter(bgwriter);
+  
+  Log(kDebug, "mouse layer\n");
+  // マウスレイヤ
+  auto mouse_window = std::make_shared<Window>(
+    kMouseCursorWidth, kMouseCursorHeight
+  );
+  mouse_window->SetTransparentColor(kMouseTransparentColor);
+  DrawMouseCursor(mouse_window->Writer(), {0, 0});
+
+  // レイヤマネージャー
+  layer_manager = new LayerManager;
+  layer_manager->SetWriter(pixel_writer);
+
+  auto bglayer_id = layer_manager->NewLayer()
+    .SetWindow(bgwindow)
+    .Move({0, 0})
+    .ID();
+  mouse_layer_id = layer_manager->NewLayer()
+    .SetWindow(mouse_window)
+    .Move({200, 200})
+    .ID();
+
+  layer_manager->UpDown(bglayer_id, 0);
+  layer_manager->UpDown(mouse_layer_id, 1);
+  layer_manager->Draw();
+
+ Log(kDebug, "loop\n");
   // メッセージ処理ループ
   while(true) {
     // キューからメッセージを取り出す

@@ -74,6 +74,8 @@ void BitmapMemoryManager::SetBit(FrameID frame, bool allocated){
 }
 
 
+extern "C" caddr_t program_break, program_break_end;
+
 Error InitializeHeap(BitmapMemoryManager& memory_manager) {
   const int kHeapFrames = 64 * 512;
   const auto heap_start = memory_manager.Allocate(kHeapFrames);

@@ -9,7 +9,7 @@ caddr_t program_break, program_break_end;
 
 caddr_t sbrk(int incr) {
   // メモリ領域に余裕があるか確認。ないならエラー
-  if(program_break == 0 | program_break + incr >= program_break_end){
+  if (program_break == 0 || program_break + incr >= program_break_end){
     errno = ENOMEM;
     return (caddr_t)-1;
   }
