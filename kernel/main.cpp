@@ -166,7 +166,7 @@ extern "C" void KernelMainNewStack(
   // コンソール
   console = new (console_buf) Console{*pixel_writer, kDesktopFGColor, kDesktopBGColor};
   printk("Welcome to My OS desu\n");
-  SetLogLevel(kWarn);
+  SetLogLevel(kInfo);
 
   
   // メモリ
@@ -196,10 +196,16 @@ extern "C" void KernelMainNewStack(
         desc->number_of_pages * kUEFIPageSize / kBytesPerFrame  // UEFI規格からの単位変換
       );
     }
-
-    memory_manager->SetMemoryRange(FrameID{1}, FrameID{available_end / kBytesPerFrame});
   }
-
+  memory_manager->SetMemoryRange(FrameID{1}, FrameID{available_end / kBytesPerFrame});
+    
+  // ヒープ初期化
+  if(auto err = InitializeHeap(*memory_manager)){
+    Log(kError, "failed to allocate pages: %s at %s:%d\n", 
+        err.Name(), err.File(), err.Line()
+    );
+    exit(1);
+  }
 
   // マウスカーソル
   mouse_cursor = new(mouse_cursor_buf) MouseCursor{
@@ -257,7 +263,6 @@ extern "C" void KernelMainNewStack(
 
   
   // xHC のレジスタ群が配置されているメモリアドレスを取得する
-  //SetLogLevel(kDebug);
   const WithError<uint64_t> xhc_bar = pci::ReadBar(*xhc_dev, 0);
   Log(kDebug, "ReadBar: %s\n", xhc_bar.error.Name());
   const uint64_t xhc_mmio_base = xhc_bar.value & ~static_cast<uint64_t>(0xf);

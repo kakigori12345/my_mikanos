@@ -75,3 +75,8 @@ class BitmapMemoryManager {
     void SetBit(FrameID frame, bool allocated);
 };
 
+
+// プログラムブレークの初期値を設定する
+extern "C" caddr_t program_break, program_break_end;
+
+Error InitializeHeap(BitmapMemoryManager& memory_managr);

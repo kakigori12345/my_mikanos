@@ -29,3 +29,8 @@ void SetLogLevel(LogLevel level);
  * @param format  書式文字列．printk と互換．
  */
 int Log(LogLevel level, const char* format, ...);
+
+#define MAKE_LOG(level, format, ...) \
+  Log(level, format, __VA_ARGS__);           \
+  Log(level, "    at File: %s  Line: %d\n", __FILE__, __LINE__);  \
+
