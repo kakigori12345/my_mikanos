@@ -297,14 +297,12 @@ extern "C" void KernelMainNewStack(
     }
   }
 
-  // 2枚のレイヤを生成する  
-  const int kFrameWidth = frame_buffer_config.horizontal_resolution; 
-  const int kFrameHeight = frame_buffer_config.vertical_resolution; 
   // バックグラウンドレイヤ
   auto bgwindow = std::make_shared<Window>(
-    kFrameWidth, kFrameHeight, frame_buffer_config.pixel_format
+    screen_size.x, screen_size.y, frame_buffer_config.pixel_format
   );
   auto bgwriter = bgwindow->Writer();
+
   DrawDesktop(*bgwriter);
   console->SetWindow(bgwindow);
   
@@ -314,6 +312,15 @@ extern "C" void KernelMainNewStack(
   );
   mouse_window->SetTransparentColor(kMouseTransparentColor);
   DrawMouseCursor(mouse_window->Writer(), {0, 0});
+  mouse_position = {200, 200};
+
+  // メインウィンドウ
+  auto main_window = std::make_shared<Window>(
+    160, 68, frame_buffer_config_ref.pixel_format
+  );
+  DrawWindow(*main_window->Writer(), "Hello world");
+  WriteString(*main_window->Writer(), {24, 28}, "Welcome to", {0, 0, 0});
+  WriteString(*main_window->Writer(), {24, 44}, "Mikan OS !!", {0, 0, 0});
 
   // レイヤマネージャー
   FrameBuffer screen;
@@ -332,9 +339,14 @@ extern "C" void KernelMainNewStack(
     .SetWindow(mouse_window)
     .Move({200, 200})
     .ID();
+  auto main_window_layer_id = layer_manager->NewLayer()
+    .SetWindow(main_window)
+    .Move({300, 100})
+    .ID();
 
   layer_manager->UpDown(bglayer_id, 0);
   layer_manager->UpDown(mouse_layer_id, 1);
+  layer_manager->UpDown(main_window_layer_id, 1);
   layer_manager->Draw();
 
   // メッセージ処理ループ

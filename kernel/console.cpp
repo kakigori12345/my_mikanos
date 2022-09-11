@@ -20,7 +20,7 @@ void Console::PutString(const char* s){
       NewLine();
     }
     else if(cursor_column_ < kColumns - 1){
-      WriteAscii(*writer_, 8 * cursor_column_, 16 * cursor_row_, *s, fg_color_);
+      WriteAscii(*writer_, {8 * cursor_column_, 16 * cursor_row_}, *s, fg_color_);
       buffer_[cursor_row_][cursor_column_] = *s;
       ++cursor_column_;
     }
@@ -68,7 +68,7 @@ void Console::NewLine(){
     FillRectangle(*writer_, {0, 0}, {8 * kColumns, 16 * kRows}, bg_color_);
     for(int row = 0; row < kRows -1; ++row){
       memcpy(buffer_[row], buffer_[row+1], kColumns+1);
-      WriteString(*writer_, 0, 16*row, buffer_[row], fg_color_);
+      WriteString(*writer_, {0, 16*row}, buffer_[row], fg_color_);
     }
     // 最下行は空白にする
     memset(buffer_[kRows - 1], 0, kColumns+1);
@@ -78,6 +78,6 @@ void Console::NewLine(){
 void Console::Refresh(){
   Log(kDebug, "refresh\n");
   for(int row = 0; row < kRows; ++row){
-    WriteString(*writer_, 0, 16 * row, buffer_[row], fg_color_);
+    WriteString(*writer_, {0, 16 * row}, buffer_[row], fg_color_);
   }
 }
