@@ -22,6 +22,7 @@
 #include "memory_manager.hpp"
 #include "window.hpp"
 #include "layer.hpp"
+#include "timer.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -29,30 +30,19 @@
 #include "usb/xhci/xhci.hpp"
 #include "usb/xhci/trb.hpp"
 
+
 //----------------
-// グローバル変数
+// グローバル
 //----------------
+
 // ピクセルライター
 char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
 PixelWriter* pixel_writer;
+
 // コンソール
 char console_buf[sizeof(Console)];
 Console* console;
 
-// マウスカーソル
-unsigned int mouse_layer_id;
-void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
-  layer_manager->MoveRelative(mouse_layer_id, {displacement_x, displacement_y});
-  layer_manager->Draw();
-}
-
-// メモリマネージャー
-char memory_manager_buf[sizeof(BitmapMemoryManager)];
-BitmapMemoryManager* memory_manager;
-
-//------------------
-// 汎用関数
-//------------------
 int printk(const char* format, ...){
   va_list ap;
   int result;
@@ -65,6 +55,22 @@ int printk(const char* format, ...){
   console->PutString(s);
   return result;
 }
+
+// マウスカーソル
+unsigned int mouse_layer_id;
+void MouseObserver(int8_t displacement_x, int8_t displacement_y) {
+  layer_manager->MoveRelative(mouse_layer_id, {displacement_x, displacement_y});
+  StartLAPICTimer();
+  layer_manager->Draw();
+  auto elapsed = LAPICTimerElapsed();
+  StopLAPICTimer();
+  printk("Mouseobserver: elapsed = %u\n", elapsed);
+}
+
+// メモリマネージャー
+char memory_manager_buf[sizeof(BitmapMemoryManager)];
+BitmapMemoryManager* memory_manager;
+
 
 void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
   bool intel_ehc_exist = false;
@@ -86,7 +92,6 @@ void SwitchEhci2Xhci(const pci::Device& xhc_dev) {
   Log(kDebug, "SwitchEhci2Xhci: SS = %02, xHCI = %02x\n",
       superspeed_ports, ehci2xhci_ports);
 }
-
 
 // 割り込みハンドラ
 // XHCI
@@ -139,6 +144,8 @@ extern "C" void KernelMainNewStack(
   console->SetWriter(pixel_writer);
   printk("Welcome to My OS desu\n");
   SetLogLevel(kInfo);
+
+  InitializeLAPICTimer();
 
 
   // セグメンテーション設定
