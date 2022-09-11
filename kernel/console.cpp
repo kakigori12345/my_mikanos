@@ -36,6 +36,7 @@ void Console::SetWriter(PixelWriter* writer){
     return;
   }
   writer_ = writer;
+  window_.reset(); //NewLinw() で window_ が使われないようにしているのかも
   Refresh();
 }
 
