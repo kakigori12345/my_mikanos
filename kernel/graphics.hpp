@@ -27,6 +27,13 @@ auto operator +(const Vector2D<T>& lhs, const Vector2D<U>& rhs){
   return tmp;
 }
 
+
+template <typename T>
+struct Rectangle {
+  Vector2D<T> pos, size;
+};
+
+
 struct PixelColor {
   uint8_t r, g, b;
 };

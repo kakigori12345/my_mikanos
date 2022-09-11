@@ -14,6 +14,8 @@ class FrameBuffer {
 
     FrameBufferWriter& Writer() { return *writer_; }
 
+    void Move(Vector2D<int> dst_pos, const Rectangle<int>& src);
+
   private:
     FrameBufferConfig config_{};
     std::vector<uint8_t> buffer_{};
