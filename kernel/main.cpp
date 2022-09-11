@@ -23,6 +23,7 @@
 #include "window.hpp"
 #include "layer.hpp"
 #include "timer.hpp"
+#include "frame_buffer.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -288,23 +289,28 @@ extern "C" void KernelMainNewStack(
   const int kFrameWidth = frame_buffer_config.horizontal_resolution; 
   const int kFrameHeight = frame_buffer_config.vertical_resolution; 
   // バックグラウンドレイヤ
-  auto bgwindow = std::make_shared<Window>(kFrameWidth, kFrameHeight);
+  auto bgwindow = std::make_shared<Window>(
+    kFrameWidth, kFrameHeight, frame_buffer_config.pixel_format
+  );
   auto bgwriter = bgwindow->Writer();
-  Log(kDebug, "mouse layer\n");
   DrawDesktop(*bgwriter);
   console->SetWriter(bgwriter);
   
-  Log(kDebug, "mouse layer\n");
   // マウスレイヤ
   auto mouse_window = std::make_shared<Window>(
-    kMouseCursorWidth, kMouseCursorHeight
+    kMouseCursorWidth, kMouseCursorHeight, frame_buffer_config.pixel_format
   );
   mouse_window->SetTransparentColor(kMouseTransparentColor);
   DrawMouseCursor(mouse_window->Writer(), {0, 0});
 
   // レイヤマネージャー
+  FrameBuffer screen;
+  if(auto err = screen.Initialize(frame_buffer_config)){
+    MAKE_LOG(kError, "failed to initialize frame buffer.\n");
+    //Log(kError, "failed to initialize frame buffer.\n");
+  }
   layer_manager = new LayerManager;
-  layer_manager->SetWriter(pixel_writer);
+  layer_manager->SetWriter(&screen);
 
   auto bglayer_id = layer_manager->NewLayer()
     .SetWindow(bgwindow)
@@ -319,7 +325,6 @@ extern "C" void KernelMainNewStack(
   layer_manager->UpDown(mouse_layer_id, 1);
   layer_manager->Draw();
 
-  Log(kDebug, "loop\n");
   // メッセージ処理ループ
   while(true) {
     // キューからメッセージを取り出す

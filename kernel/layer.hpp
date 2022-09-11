@@ -6,6 +6,7 @@
 
 #include "graphics.hpp"
 #include "window.hpp"
+#include "frame_buffer.hpp"
 
 class Layer {
   public:
@@ -21,7 +22,7 @@ class Layer {
     Layer& MoveRelative(Vector2D<int> pos_diff);
 
     // writer に設定されているウィンドウの内容を描画
-    void DrawTo(PixelWriter& writer) const;
+    void DrawTo(FrameBuffer& screen) const;
 
   private:
     unsigned int id_;
@@ -33,7 +34,7 @@ class Layer {
 // 複数のレイヤを管理するクラス
 class LayerManager {
   public:
-    void SetWriter(PixelWriter* writer);
+    void SetWriter(FrameBuffer* screen);
     Layer& NewLayer();
 
     // 現在表示状態にあるレイヤーを描画する
@@ -48,7 +49,7 @@ class LayerManager {
     void Hide(unsigned int id);
 
   private:
-    PixelWriter* writer_{nullptr};
+    FrameBuffer* screen_{nullptr};
     std::vector<std::unique_ptr<Layer>> layers_{};
     std::vector<Layer*> layer_stack_{};
     unsigned int latest_id_{0};

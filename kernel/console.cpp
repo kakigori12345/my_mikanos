@@ -32,16 +32,10 @@ void Console::PutString(const char* s){
 }
 
 void Console::SetWriter(PixelWriter* writer){
-  Log(kDebug, "set writer\n");
   if(writer == writer_){
-    Log(kDebug, "return\n");
     return;
   }
-  Log(kDebug, "writer _ = writer\n");
-  Log(kDebug, "prev writer pointer : %d\n", writer_);
-  Log(kDebug, "writer pointer : %d\n", writer);
   writer_ = writer;
-  Log(kDebug, "refresh - 1\n");
   Refresh();
 }
 
@@ -55,7 +49,7 @@ void Console::NewLine(){
     // 全部塗りつぶす
     for(int y = 0; y < 16 * kRows; ++y){
       for(int x = 0; x < 8 * kColumns; ++x){
-        writer_->Write(x, y, bg_color_);
+        writer_->Write(Vector2D<int>{x, y}, bg_color_);
       }
     }
     // バッファに残していた情報をもとに画面再描画
