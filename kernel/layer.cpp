@@ -1,4 +1,5 @@
 #include "layer.hpp"
+#include "logger.hpp"
 
 #include <algorithm>
 
@@ -24,6 +25,10 @@ std::shared_ptr<Window> Layer::GetWindow() const{
   return window_;
 }
 
+Vector2D<int> Layer::GetPosition() const{
+  return pos_;
+}
+
 Layer& Layer::Move(Vector2D<int> pos) {
   pos_ = pos;
   return *this;
@@ -34,9 +39,9 @@ Layer& Layer::MoveRelative(Vector2D<int> pos_diff) {
   return *this;
 }
 
-void Layer::DrawTo(FrameBuffer& screen) const{
+void Layer::DrawTo(FrameBuffer& screen, const Rectangle<int>& area) const{
   if(window_){
-    window_->DrawTo(screen, pos_);
+    window_->DrawTo(screen, pos_, area);
   }
 }
 
@@ -54,23 +59,46 @@ Layer& LayerManager::NewLayer(){
   return *layers_.emplace_back(new Layer{latest_id_});
 }
 
-void LayerManager::Draw() const{
+void LayerManager::Draw(const Rectangle<int>& area) const{
   for(auto layer : layer_stack_){
-    layer->DrawTo(*screen_);
+    layer->DrawTo(*screen_, area);
   }
 }
 
-void LayerManager::Move(unsigned int id, Vector2D<int> new_position){
+void LayerManager::Draw(unsigned int id) const{
+  bool isDraw = false;
+  Rectangle<int> window_area;
+  for(auto layer : layer_stack_){
+    if(layer->ID() == id){
+      window_area.size = layer->GetWindow()->Size();
+      window_area.pos = layer->GetPosition();
+    }
+    if(isDraw){
+      layer->DrawTo(*screen_, window_area);
+    }
+  }
+}
+
+void LayerManager::Move(unsigned int id, Vector2D<int> new_pos){
   Layer* layer = _FindLayer(id);
   if(layer){
-    layer->Move(new_position);
+    const auto window_size = layer->GetWindow()->Size();
+    const auto old_pos = layer->GetPosition();
+    layer->Move(new_pos);
+    Draw({old_pos, window_size});
+    Draw(id);
   }
+  MAKE_LOG(kWarn, "_FindLayer で nullptr が返ってきました。");
 }
 
 void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff){
   Layer* layer = _FindLayer(id);
   if(layer){
+    const auto window_size = layer->GetWindow()->Size();
+    const auto old_pos = layer->GetPosition();
     layer->MoveRelative(pos_diff);
+    Draw({old_pos, window_size});
+    Draw(id);
   }
 }
 

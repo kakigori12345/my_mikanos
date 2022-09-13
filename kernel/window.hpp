@@ -32,7 +32,7 @@ class Window{
     Window& operator=(const Window& rhs) = delete;
 
     // 与えられた FrameBuffer にこのウィンドウの表示領域を描画する
-    void DrawTo(FrameBuffer& dst, Vector2D<int> position);
+    void DrawTo(FrameBuffer& dst, Vector2D<int> position, const Rectangle<int>& area);
     // 透過色を設定する（std::nullopt を渡せば無効化できる）
     void SetTransparentColor(std::optional<PixelColor> c);
     // このインスタンスに紐づいた WindowWriter を取得する
@@ -48,6 +48,8 @@ class Window{
     int Width() const;
     // 平面描画領域の高さをピクセル単位で返す
     int Height() const;
+    
+    Vector2D<int> Size() const;
   
   private:
     int width_, height_;
