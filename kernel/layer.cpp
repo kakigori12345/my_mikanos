@@ -52,6 +52,10 @@ void Layer::DrawTo(FrameBuffer& screen, const Rectangle<int>& area) const{
 
 void LayerManager::SetWriter(FrameBuffer* screen){
   screen_ = screen;
+
+  FrameBufferConfig back_config = screen->Config();
+  back_config.frame_buffer = nullptr;
+  back_buffer_.Initialize(back_config);
 }
 
 Layer& LayerManager::NewLayer(){
@@ -60,9 +64,13 @@ Layer& LayerManager::NewLayer(){
 }
 
 void LayerManager::Draw(const Rectangle<int>& area) const{
+  // 一旦バックバッファにコピーする
   for(auto layer : layer_stack_){
-    layer->DrawTo(*screen_, area);
+    layer->DrawTo(back_buffer_, area);
   }
+
+  // 全ての描画が完了した状態でスクリーンに反映
+  screen_->Copy(area.pos, back_buffer_, area);
 }
 
 void LayerManager::Draw(unsigned int id) const{
@@ -75,9 +83,10 @@ void LayerManager::Draw(unsigned int id) const{
       isDraw = true;
     }
     if(isDraw){
-      layer->DrawTo(*screen_, window_area);
+      layer->DrawTo(back_buffer_, window_area);
     }
   }
+  screen_->Copy(window_area.pos, back_buffer_, window_area);
 }
 
 void LayerManager::Move(unsigned int id, Vector2D<int> new_pos){

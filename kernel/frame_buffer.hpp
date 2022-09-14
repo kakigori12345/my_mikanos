@@ -13,6 +13,7 @@ class FrameBuffer {
     Error Copy(Vector2D<int> dst_pos, const FrameBuffer& src, const Rectangle<int>& src_area);
 
     FrameBufferWriter& Writer() { return *writer_; }
+    FrameBufferConfig Config() { return config_; }
 
     void Move(Vector2D<int> dst_pos, const Rectangle<int>& src);
 
