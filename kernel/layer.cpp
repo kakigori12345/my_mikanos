@@ -72,6 +72,7 @@ void LayerManager::Draw(unsigned int id) const{
     if(layer->ID() == id){
       window_area.size = layer->GetWindow()->Size();
       window_area.pos = layer->GetPosition();
+      isDraw = true;
     }
     if(isDraw){
       layer->DrawTo(*screen_, window_area);
@@ -88,7 +89,9 @@ void LayerManager::Move(unsigned int id, Vector2D<int> new_pos){
     Draw({old_pos, window_size});
     Draw(id);
   }
-  MAKE_LOG(kWarn, "_FindLayer で nullptr が返ってきました。");
+  else{
+    MAKE_LOG(kWarn, "_FindLayer returned nullptr. id: %d", id);
+  }
 }
 
 void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff){
@@ -99,6 +102,9 @@ void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff){
     layer->MoveRelative(pos_diff);
     Draw({old_pos, window_size});
     Draw(id);
+  }
+  else{
+    MAKE_LOG(kWarn, "_FindLayer returned nullptr. id: %d", id);
   }
 }
 

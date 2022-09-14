@@ -18,23 +18,29 @@ struct Vector2D{
     y += rhs.y;
     return *this;
   }
+
+  template <typename U>
+  auto operator +(const Vector2D<U>& rhs) const {
+    auto tmp = *this;
+    tmp += rhs;
+    return tmp;
+  }
+
+  template <typename U>
+  Vector2D<T>& operator -= (const Vector2D<U>& rhs) {
+    x -= rhs.x;
+    y -= rhs.y;
+    return *this;
+  }
+
+  template <typename U>
+  auto operator -(const Vector2D<U>& rhs) const {
+    auto tmp = *this;
+    tmp -= rhs;
+    return tmp;
+  }
 };
 
-template <typename T, typename U>
-auto operator +(const Vector2D<T>& lhs, const Vector2D<U>& rhs){
-  auto tmp{lhs};
-  tmp.x += rhs.x;
-  tmp.y += rhs.y;
-  return tmp;
-}
-
-template <typename T, typename U>
-auto operator -(const Vector2D<T>& lhs, const Vector2D<U>& rhs){
-  auto tmp{lhs};
-  tmp.x -= rhs.x;
-  tmp.y -= rhs.y;
-  return tmp;
-}
 
 template <typename T>
 Vector2D<T> ElementMax(const Vector2D<T>& lhs, const Vector2D<T>& rhs) {

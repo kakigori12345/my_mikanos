@@ -53,12 +53,6 @@ int printk(const char* format, ...){
   result = vsprintf(s, format, ap);
   va_end(ap);
 
-  StartLAPICTimer();
-  console->PutString(s);
-  auto elapsed = LAPICTimerElapsed();
-  StopLAPICTimer();
-
-  sprintf(s, "[%9d]", elapsed);
   console->PutString(s);
 
   return result;
@@ -283,7 +277,7 @@ extern "C" void KernelMainNewStack(
   // USB ポートを調べて接続済みポートの設定を行う
   usb::HIDMouseDriver::default_observer = MouseObserver;
 
-  for(int i = 1; i < xhc.MaxPorts(); ++i){
+  for(int i = 1; i <= xhc.MaxPorts(); ++i){
     auto port = xhc.PortAt(i);
     Log(kDebug, "Port %d: IsConnected=%d\n", i, port.IsConnected());
 
@@ -301,9 +295,7 @@ extern "C" void KernelMainNewStack(
     screen_size.x, screen_size.y, frame_buffer_config.pixel_format
   );
   auto bgwriter = bgwindow->Writer();
-
   DrawDesktop(*bgwriter);
-  console->SetWindow(bgwindow);
   
   // マウスレイヤ
   auto mouse_window = std::make_shared<Window>(
@@ -340,11 +332,11 @@ extern "C" void KernelMainNewStack(
     .ID();
   mouse_layer_id = layer_manager->NewLayer()
     .SetWindow(mouse_window)
-    .Move({200, 200})
+    .Move(mouse_position)
     .ID();
   auto main_window_layer_id = layer_manager->NewLayer()
     .SetWindow(main_window)
-    .Move({300, 100})
+    .Move({300, 300})
     .ID();
   console->SetLayerID( layer_manager->NewLayer()
     .SetWindow(console_window)
@@ -353,8 +345,8 @@ extern "C" void KernelMainNewStack(
 
   layer_manager->UpDown(bglayer_id, 0);
   layer_manager->UpDown(console->LayerID(), 1);
-  layer_manager->UpDown(mouse_layer_id, 2);
-  layer_manager->UpDown(main_window_layer_id, 3);
+  layer_manager->UpDown(main_window_layer_id, 2);
+  layer_manager->UpDown(mouse_layer_id, 3);
   layer_manager->Draw({{0, 0}, screen_size});
 
 
