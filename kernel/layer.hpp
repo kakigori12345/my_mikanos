@@ -26,10 +26,14 @@ class Layer {
     // writer に設定されているウィンドウの内容を描画
     void DrawTo(FrameBuffer& screen, const Rectangle<int>& area) const;
 
+    Layer& SetDraggable(bool draggable);
+    bool IsDraggable() const;
+
   private:
     unsigned int id_;
     Vector2D<int> pos_;
     std::shared_ptr<Window> window_;
+    bool draggable_;
 };
 
 

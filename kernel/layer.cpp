@@ -9,6 +9,9 @@
 
 Layer::Layer(unsigned int id)
   : id_{id}
+  , pos_{}
+  , window_{}
+  , draggable_{false}
 {
 }
 
@@ -43,6 +46,15 @@ void Layer::DrawTo(FrameBuffer& screen, const Rectangle<int>& area) const{
   if(window_){
     window_->DrawTo(screen, pos_, area);
   }
+}
+
+Layer& Layer::SetDraggable(bool draggable) {
+  draggable_ = draggable;
+  return *this;
+}
+
+bool Layer::IsDraggable() const {
+  return draggable_;
 }
 
 
