@@ -208,15 +208,28 @@ Layer* LayerManager::_FindLayer(unsigned int id){
 }
 
 LayerManager* layer_manager;
+unsigned int bglayer_id;
 
 namespace {
+  std::shared_ptr<Window> bgwindow;
   FrameBuffer screen;
 }
 
 void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
+  // バックグラウンドレイヤ
+  bgwindow = std::make_shared<Window>(
+    GetScreenSize().x, GetScreenSize().y, frame_buffer_config.pixel_format
+  );
+  DrawDesktop(*bgwindow->Writer());
+
   if(auto err = screen.Initialize(frame_buffer_config)){
     MAKE_LOG(kError, "failed to initialize frame buffer.\n");
   }
   layer_manager = new LayerManager;
   layer_manager->SetWriter(&screen);
+
+  bglayer_id = layer_manager->NewLayer()
+    .SetWindow(bgwindow)
+    .Move({0, 0})
+    .ID();
 }

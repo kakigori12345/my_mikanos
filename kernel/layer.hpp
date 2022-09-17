@@ -74,6 +74,7 @@ class LayerManager {
 };
 
 extern LayerManager* layer_manager;
+extern unsigned int bglayer_id;
 
 void InitializeLayer(const FrameBufferConfig& frame_buffer_config);
 

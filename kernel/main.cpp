@@ -256,13 +256,7 @@ extern "C" void KernelMainNewStack(
     }
   }
 
-  // バックグラウンドレイヤ
-  auto bgwindow = std::make_shared<Window>(
-    GetScreenSize().x, GetScreenSize().y, frame_buffer_config.pixel_format
-  );
-  auto bgwriter = bgwindow->Writer();
-  DrawDesktop(*bgwriter);
-  
+   
   // メインウィンドウ
   auto main_window = std::make_shared<Window>(
     160, 52, frame_buffer_config.pixel_format
@@ -278,10 +272,6 @@ extern "C" void KernelMainNewStack(
   // レイヤマネージャー
   InitializeLayer(frame_buffer_config_ref);
   
-  auto bglayer_id = layer_manager->NewLayer()
-    .SetWindow(bgwindow)
-    .Move({0, 0})
-    .ID();
   auto main_window_layer_id = layer_manager->NewLayer()
     .SetWindow(main_window)
     .SetDraggable(true)
