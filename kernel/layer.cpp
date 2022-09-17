@@ -187,6 +187,14 @@ Layer* LayerManager::FindLayerByPosition(Vector2D<int> pos, unsigned int exclude
   return *it;
 }
 
+void LayerManager::PrintLayersID() const{
+  Log(kInfo, "layer_stack_id: ");
+  for(auto layer : layer_stack_){
+    Log(kInfo, "%d ", layer->ID());
+  }
+  Log(kInfo, "\n");
+}
+
 Layer* LayerManager::_FindLayer(unsigned int id){
   auto pred = [id](const std::unique_ptr<Layer>&elem) {
     return elem->ID() == id;

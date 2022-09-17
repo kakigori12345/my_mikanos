@@ -57,7 +57,10 @@ class LayerManager {
 
     // 指定した座標にある最前面レイヤを探す
     // exclude_id の ID を持つレイヤは検索処理をスキップする
-    Layer* FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const;      
+    Layer* FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const;
+  
+  public: 
+    void PrintLayersID() const;
 
   private:
     Layer* _FindLayer(unsigned int id);
