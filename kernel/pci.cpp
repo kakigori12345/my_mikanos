@@ -314,7 +314,7 @@ namespace pci {
   }
 }
 
-void InitializeDevice(){
+void InitializePCI(){
   // デバイスを列挙する
   auto err = pci::ScanAllBus();
   Log(kDebug, "ScallAllBus: %s\n", err.Name());
