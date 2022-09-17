@@ -56,10 +56,6 @@ int printk(const char* format, ...){
   return result;
 }
 
-// メモリマネージャー
-char memory_manager_buf[sizeof(BitmapMemoryManager)];
-BitmapMemoryManager* memory_manager;
-
 std::deque<Message>* main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
@@ -87,47 +83,8 @@ extern "C" void KernelMainNewStack(
   InitializeLAPICTimer();
   InitializeSegmentation();
   InitializePaging();
+  InitializeMemoryManager(memory_map);
 
-
-  // メモリ
-  ::memory_manager = new(memory_manager_buf) BitmapMemoryManager;
-
-  const auto memory_map_base = reinterpret_cast<uintptr_t>(memory_map.buffer);
-  uintptr_t available_end = 0;
-  for(uintptr_t itr = memory_map_base;
-      itr < memory_map_base + memory_map.map_size;
-      itr += memory_map.descriptor_size)
-  {
-    auto desc = reinterpret_cast<const MemoryDescriptor*>(itr);
-    if(available_end < desc->physical_start) {
-      memory_manager->MarkAllocated(
-        FrameID{available_end / kBytesPerFrame},
-        (desc->physical_start - available_end) / kBytesPerFrame
-      );
-    }
-
-    const auto physical_end = desc->physical_start + desc->number_of_pages * kUEFIPageSize;
-    if(IsAvailable(static_cast<MemoryType>(desc->type))) {
-      available_end = physical_end;
-    }
-    else {
-      memory_manager->MarkAllocated(
-        FrameID{desc->physical_start / kBytesPerFrame},
-        desc->number_of_pages * kUEFIPageSize / kBytesPerFrame  // UEFI規格からの単位変換
-      );
-    }
-  }
-  memory_manager->SetMemoryRange(FrameID{1}, FrameID{available_end / kBytesPerFrame});
-    
-  // ヒープ初期化
-  if(auto err = InitializeHeap(*memory_manager)){
-    Log(kError, "failed to allocate pages: %s at %s:%d\n", 
-        err.Name(), err.File(), err.Line()
-    );
-    exit(1);
-  }
-
-  // キュー
   ::main_queue = new std::deque<Message>(32);
   InitializeInterrupt(main_queue);
 
@@ -185,12 +142,12 @@ extern "C" void KernelMainNewStack(
 
     // キューからメッセージを取り出す
     __asm__("cli"); //割り込み無効化
-    if(main_queue.Count() == 0) {
+    if(main_queue->size() == 0) {
       __asm__("sti");
       continue;
     }
-    Message msg = main_queue.Front();
-    main_queue.Pop();
+    Message msg = main_queue->front();
+    main_queue->pop_front();
     __asm__("sti"); //割り込み有効化
 
     switch(msg.type) {

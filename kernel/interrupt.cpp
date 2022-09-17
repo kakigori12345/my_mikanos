@@ -1,4 +1,6 @@
 #include "interrupt.hpp"
+#include "segment.hpp"
+#include "asmfunc.h"
 
 std::array<InterruptDescriptor, 256> idt;
 
@@ -22,13 +24,13 @@ void NotifyEndOfInterrupt(){
 }
 
 namespace {
+  std::deque<Message>* msg_queue;
+  
   __attribute__((interrupt))
   void IntHandlerXHCI(InterruptFrame* frame) {
-    main_queue->Push(Message{Message::kInterruptXHCI});
+    msg_queue->push_back(Message{Message::kInterruptXHCI});
     NotifyEndOfInterrupt();
   }
-
-  std::deque<Message>* msg_queue;
 }
 
 void InitializeInterrupt(std::deque<Message>* msg_queue){

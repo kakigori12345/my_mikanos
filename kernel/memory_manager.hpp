@@ -3,6 +3,7 @@
 #include <array>
 #include <limits>
 
+#include "memory_map.hpp"
 #include "error.hpp"
 
 namespace {
@@ -78,3 +79,5 @@ class BitmapMemoryManager {
 
 // プログラムブレークの初期値を設定する
 Error InitializeHeap(BitmapMemoryManager& memory_managr);
+
+void InitializeMemoryManager(const MemoryMap& memory_map);
