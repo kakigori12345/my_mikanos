@@ -68,6 +68,16 @@ void InitializeMainWindow(PixelFormat pixel_format){
     .ID();
 }
 
+void SetLayerUpDown() {
+  layer_manager->UpDown(bglayer_id, 0);
+  layer_manager->UpDown(console->LayerID(), 1);
+  layer_manager->UpDown(main_window_layer_id, 2);
+  layer_manager->UpDown(mouse_layer_id, 3);
+  layer_manager->Draw({{0, 0}, GetScreenSize()});
+
+  layer_manager->PrintLayersID();
+}
+
 std::deque<Message>* main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
@@ -103,14 +113,7 @@ extern "C" void KernelMainNewStack(
   InitializeMainWindow(frame_buffer_config_ref.pixel_format);
   InitializeMouse(frame_buffer_config_ref.pixel_format);
 
-  layer_manager->UpDown(bglayer_id, 0);
-  layer_manager->UpDown(console->LayerID(), 1);
-  layer_manager->UpDown(main_window_layer_id, 2);
-  layer_manager->UpDown(mouse_layer_id, 3);
-  layer_manager->Draw({{0, 0}, GetScreenSize()});
-
-  layer_manager->PrintLayersID();
-
+  SetLayerUpDown();
 
   // ループ数をカウントする
   char str[128];
