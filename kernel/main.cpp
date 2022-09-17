@@ -4,6 +4,7 @@
 
 #include <numeric>
 #include <vector>
+#include <deque>
 
 #include "frame_buffer_config.hpp"
 #include "graphics.hpp"
@@ -24,6 +25,7 @@
 #include "layer.hpp"
 #include "timer.hpp"
 #include "frame_buffer.hpp"
+#include "message.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -58,19 +60,7 @@ int printk(const char* format, ...){
 char memory_manager_buf[sizeof(BitmapMemoryManager)];
 BitmapMemoryManager* memory_manager;
 
-struct Message {
-  enum Type {
-    kInterruptXHCI,
-  } type;
-};
-
-ArrayQueue<Message>* main_queue;
-
-__attribute__((interrupt))
-void IntHandlerXHCI(InterruptFrame* frame) {
-  main_queue->Push(Message{Message::kInterruptXHCI});
-  NotifyEndOfInterrupt();
-}
+std::deque<Message>* main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 
@@ -90,7 +80,7 @@ extern "C" void KernelMainNewStack(
   // コンソール
   console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
   console->SetWriter(screen_writer);
-  
+
   printk("Welcome to My OS desu\n");
   SetLogLevel(kInfo);
 
@@ -138,15 +128,8 @@ extern "C" void KernelMainNewStack(
   }
 
   // キュー
-  std::array<Message, 32> main_queue_data;
-  ArrayQueue<Message> main_queue{main_queue_data};
-  ::main_queue = &main_queue;
-
-
-  // 割り込みベクタ0x40を設定してIDTをCPUに登録する
-  SetIDTEntry(idt[InterruptVector::kXHCI], MakeIDTAttr(DescriptorType::kInterruptGate, 0),
-    reinterpret_cast<uint64_t>(IntHandlerXHCI), kernel_cs);
-  LoadIDT(sizeof(idt) - 1, reinterpret_cast<uintptr_t>(&idt[0]));
+  ::main_queue = new std::deque<Message>(32);
+  InitializeInterrupt(main_queue);
 
   InitializePCI();
   usb::xhci::Initialize();
