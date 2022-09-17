@@ -1,5 +1,6 @@
 #include "graphics.hpp"
 
+
 void RGBResv8BitPerColorPixelWriter::Write(Vector2D<int> pos, const PixelColor& c){
   auto p = PixelAt(pos);
   p[0] = c.r;
@@ -51,6 +52,46 @@ void FillRectangle(
       writer.Write(pos + Vector2D<int>{dx, dy}, c);
     }
   }
+}
+
+
+
+//-------------------------
+// 初期化周り
+//-------------------------
+
+PixelWriter* screen_writer;
+FrameBufferConfig screen_config;
+
+Vector2D<int> GetScreenSize(){
+  return Vector2D<int>{
+    static_cast<int>(screen_config.horizontal_resolution),
+    static_cast<int>(screen_config.vertical_resolution)
+  };
+}
+
+namespace {
+  char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
+}
+
+void InitializeGraphics(const FrameBufferConfig& frame_buffer_config){
+  ::screen_config = frame_buffer_config;
+
+  // ピクセルライター
+  switch(frame_buffer_config.pixel_format) {
+    case kPixelRGBResv8BitPerColor:
+      screen_writer = new(pixel_writer_buf)
+        RGBResv8BitPerColorPixelWriter{frame_buffer_config};
+      break;
+    case kPixelBGRResv8BitPerColor:
+      screen_writer = new(pixel_writer_buf)
+        BGRResv8BitPerColorPixelWriter{frame_buffer_config};
+      break;
+    default:
+      exit(1);
+  }
+
+  DrawDesktop(*screen_writer);
 }
 
 void DrawDesktop(PixelWriter& writer){

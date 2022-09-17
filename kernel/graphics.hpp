@@ -147,8 +147,19 @@ void FillRectangle(
   const PixelColor& c);
 
 
+//---------------
+// グローバル
+//---------------
+// ピクセルライター
+extern PixelWriter* screen_writer;
+extern FrameBufferConfig screen_config;
+
 // デスクトップ
 const PixelColor kDesktopBGColor{45, 118, 237};
 const PixelColor kDesktopFGColor{255, 255, 255};
+
+void InitializeGraphics(const FrameBufferConfig& frame_buffer_config);
+
+Vector2D<int> GetScreenSize();
 
 void DrawDesktop(PixelWriter& writer);

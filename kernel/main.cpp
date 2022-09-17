@@ -36,10 +36,6 @@
 // グローバル
 //----------------
 
-// ピクセルライター
-char pixel_writer_buf[sizeof(RGBResv8BitPerColorPixelWriter)];
-PixelWriter* pixel_writer;
-
 // コンソール
 char console_buf[sizeof(Console)];
 Console* console;
@@ -60,7 +56,6 @@ int printk(const char* format, ...){
 
 // マウスカーソル
 unsigned int mouse_layer_id;
-Vector2D<int> screen_size;
 Vector2D<int> mouse_position;
 
 void MouseObserver(uint8_t buttons, int8_t displacement_x, int8_t displacement_y) {
@@ -70,7 +65,7 @@ void MouseObserver(uint8_t buttons, int8_t displacement_x, int8_t displacement_y
   // マウスカーソルの移動
   const auto oldpos = mouse_position;
   auto newpos = mouse_position + Vector2D<int>{displacement_x, displacement_y};
-  newpos = ElementMin(newpos, screen_size + Vector2D<int>{-1, -1}); //最大値抑制
+  newpos = ElementMin(newpos, GetScreenSize() + Vector2D<int>{-1, -1}); //最大値抑制
   mouse_position = ElementMax(newpos, {0, 0});  //最小値抑制
 
   const auto posdiff = mouse_position - oldpos;
@@ -157,26 +152,11 @@ extern "C" void KernelMainNewStack(
   FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
   MemoryMap memory_map{memory_map_ref};
 
-  screen_size.x = frame_buffer_config.horizontal_resolution;
-  screen_size.y = frame_buffer_config.vertical_resolution;
-
-  // ピクセルライター
-  switch(frame_buffer_config.pixel_format) {
-    case kPixelRGBResv8BitPerColor:
-      pixel_writer = new(pixel_writer_buf)
-        RGBResv8BitPerColorPixelWriter{frame_buffer_config};
-      break;
-    case kPixelBGRResv8BitPerColor:
-      pixel_writer = new(pixel_writer_buf)
-        BGRResv8BitPerColorPixelWriter{frame_buffer_config};
-      break;
-  }
-
-  DrawDesktop(*pixel_writer);
+  InitializeGraphics(frame_buffer_config_ref);
 
   // コンソール
   console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
-  console->SetWriter(pixel_writer);
+  console->SetWriter(screen_writer);
   printk("Welcome to My OS desu\n");
   SetLogLevel(kInfo);
 
@@ -321,7 +301,7 @@ extern "C" void KernelMainNewStack(
 
   // バックグラウンドレイヤ
   auto bgwindow = std::make_shared<Window>(
-    screen_size.x, screen_size.y, frame_buffer_config.pixel_format
+    GetScreenSize().x, GetScreenSize().y, frame_buffer_config.pixel_format
   );
   auto bgwriter = bgwindow->Writer();
   DrawDesktop(*bgwriter);
@@ -377,7 +357,7 @@ extern "C" void KernelMainNewStack(
   layer_manager->UpDown(console->LayerID(), 1);
   layer_manager->UpDown(main_window_layer_id, 2);
   layer_manager->UpDown(mouse_layer_id, 3);
-  layer_manager->Draw({{0, 0}, screen_size});
+  layer_manager->Draw({{0, 0}, GetScreenSize()});
 
 
   // ループ数をカウントする
