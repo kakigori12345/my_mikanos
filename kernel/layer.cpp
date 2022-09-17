@@ -1,5 +1,6 @@
 #include "layer.hpp"
 #include "logger.hpp"
+#include "console.hpp"
 
 #include <algorithm>
 
@@ -222,14 +223,27 @@ void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
   );
   DrawDesktop(*bgwindow->Writer());
 
+  // コンソール
+  auto console_window = std::make_shared<Window>(
+    Console::kColumns * 8, Console::kRows * 16, frame_buffer_config.pixel_format
+  );
+  console->SetWindow(console_window);
+
+  // レイヤマネージャー
   if(auto err = screen.Initialize(frame_buffer_config)){
     MAKE_LOG(kError, "failed to initialize frame buffer.\n");
   }
   layer_manager = new LayerManager;
   layer_manager->SetWriter(&screen);
 
+
   bglayer_id = layer_manager->NewLayer()
     .SetWindow(bgwindow)
     .Move({0, 0})
     .ID();
+    
+  console->SetLayerID( layer_manager->NewLayer()
+    .SetWindow(console_window)
+    .Move({0, 0})
+    .ID());
 }

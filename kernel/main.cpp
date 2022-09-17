@@ -38,10 +38,6 @@
 // グローバル
 //----------------
 
-// コンソール
-char console_buf[sizeof(Console)];
-Console* console;
-
 int printk(const char* format, ...){
   va_list ap;
   int result;
@@ -56,6 +52,22 @@ int printk(const char* format, ...){
   return result;
 }
 
+std::shared_ptr<Window> main_window;
+unsigned int main_window_layer_id;
+
+void InitializeMainWindow(PixelFormat pixel_format){
+  main_window = std::make_shared<Window>(
+    160, 52, pixel_format
+  );
+  DrawWindow(*main_window->Writer(), "Hello world");
+
+  main_window_layer_id = layer_manager->NewLayer()
+    .SetWindow(main_window)
+    .SetDraggable(true)
+    .Move({300, 100})
+    .ID();
+}
+
 std::deque<Message>* main_queue;
 
 alignas(16) uint8_t kernel_main_stack[1024 * 1024];
@@ -68,14 +80,10 @@ extern "C" void KernelMainNewStack(
   const MemoryMap& memory_map_ref
 ) 
 {
-  FrameBufferConfig frame_buffer_config{frame_buffer_config_ref};
   MemoryMap memory_map{memory_map_ref};
 
   InitializeGraphics(frame_buffer_config_ref);
-
-  // コンソール
-  console = new (console_buf) Console{kDesktopFGColor, kDesktopBGColor};
-  console->SetWriter(screen_writer);
+  InitializeConsole();
 
   printk("Welcome to My OS desu\n");
   SetLogLevel(kInfo);
@@ -91,32 +99,9 @@ extern "C" void KernelMainNewStack(
   InitializePCI();
   usb::xhci::Initialize();
    
-  // メインウィンドウ
-  auto main_window = std::make_shared<Window>(
-    160, 52, frame_buffer_config.pixel_format
-  );
-  DrawWindow(*main_window->Writer(), "Hello world");
-
-  // コンソール
-  auto console_window = std::make_shared<Window>(
-    Console::kColumns * 8, Console::kRows * 16, frame_buffer_config.pixel_format
-  );
-  console->SetWindow(console_window);
-
-  // レイヤマネージャー
   InitializeLayer(frame_buffer_config_ref);
-  
-  auto main_window_layer_id = layer_manager->NewLayer()
-    .SetWindow(main_window)
-    .SetDraggable(true)
-    .Move({300, 100})
-    .ID();
-  console->SetLayerID( layer_manager->NewLayer()
-    .SetWindow(console_window)
-    .Move({0, 0})
-    .ID());
-
-  InitializeMouse(frame_buffer_config.pixel_format);
+  InitializeMainWindow(frame_buffer_config_ref.pixel_format);
+  InitializeMouse(frame_buffer_config_ref.pixel_format);
 
   layer_manager->UpDown(bglayer_id, 0);
   layer_manager->UpDown(console->LayerID(), 1);
