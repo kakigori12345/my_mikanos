@@ -1,6 +1,6 @@
 #include "pci.hpp"
 #include "asmfunc.h"
-
+#include "logger.hpp"
 #include "error.hpp"
 
 
@@ -311,5 +311,20 @@ namespace pci {
       msg_data |= 0xc000;
     }
     return ConfigureMSI(dev, msg_addr, msg_data, num_vector_exponent);
+  }
+}
+
+void InitializeDevice(){
+  // デバイスを列挙する
+  auto err = pci::ScanAllBus();
+  Log(kDebug, "ScallAllBus: %s\n", err.Name());
+
+  for(int i = 0; i < pci::num_device; ++i) {
+    const auto& dev = pci::devices[i];
+    auto vendor_id = pci::ReadVendorId(dev);
+    auto class_code = pci::ReadClassCode(dev.bus, dev.device, dev.function);
+    Log(kDebug, "%d.%d.%d: vend %04x, class %08x, head %02x\n",
+      dev.bus, dev.device, dev.function,
+      vendor_id, class_code, dev.header_type);
   }
 }
