@@ -276,13 +276,8 @@ extern "C" void KernelMainNewStack(
   console->SetWindow(console_window);
 
   // レイヤマネージャー
-  FrameBuffer screen;
-  if(auto err = screen.Initialize(frame_buffer_config)){
-    MAKE_LOG(kError, "failed to initialize frame buffer.\n");
-  }
-  layer_manager = new LayerManager;
-  layer_manager->SetWriter(&screen);
-
+  InitializeLayer(frame_buffer_config_ref);
+  
   auto bglayer_id = layer_manager->NewLayer()
     .SetWindow(bgwindow)
     .Move({0, 0})

@@ -75,3 +75,5 @@ class LayerManager {
 
 extern LayerManager* layer_manager;
 
+void InitializeLayer(const FrameBufferConfig& frame_buffer_config);
+

@@ -208,3 +208,15 @@ Layer* LayerManager::_FindLayer(unsigned int id){
 }
 
 LayerManager* layer_manager;
+
+namespace {
+  FrameBuffer screen;
+}
+
+void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
+  if(auto err = screen.Initialize(frame_buffer_config)){
+    MAKE_LOG(kError, "failed to initialize frame buffer.\n");
+  }
+  layer_manager = new LayerManager;
+  layer_manager->SetWriter(&screen);
+}
