@@ -34,10 +34,8 @@ Timer::Timer(unsigned long timeout, int value, const char* description)
   : timeout_{timeout}
   , value_{value}
 {
-  for(int i = 0; i < 10; ++i){
-    description_[i] = description[i];
-  }
-  description_[9] = '\0';
+  memcpy(description_, description, TIMER_DESC_LENGTH);
+  description_[TIMER_DESC_LENGTH-1] = '\0';
 }
 
 TimerManager::TimerManager(std::deque<Message>& msg_queue)
@@ -62,11 +60,8 @@ void TimerManager::Tick(){
     m.arg.timer.timeout = t.Timeout();
     m.arg.timer.value = t.Value();
 
-    const char* desc = t.Description();
-    for(int i = 0; i < 9; ++i){
-      m.arg.timer.description[i] = desc[i];
-    }
-    m.arg.timer.description[9] = '\0';
+    memcpy(m.arg.timer.description, t.Description(), TIMER_DESC_LENGTH);
+    m.arg.timer.description[TIMER_DESC_LENGTH-1] = '\0';
 
     msg_queue_.push_back(m);
 
