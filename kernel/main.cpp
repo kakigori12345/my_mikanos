@@ -64,7 +64,7 @@ void InitializeMainWindow(PixelFormat pixel_format){
   main_window_layer_id = layer_manager->NewLayer()
     .SetWindow(main_window)
     .SetDraggable(true)
-    .Move({300, 100})
+    .Move({500, 200})
     .ID();
 }
 
@@ -115,8 +115,8 @@ extern "C" void KernelMainNewStack(
   SetLayerUpDown();
 
   InitializeLAPICTimer(*main_queue);
-  timer_manager->AddTimer(Timer(200, 2));
-  timer_manager->AddTimer(Timer(600, -1));
+  timer_manager->AddTimer(Timer{200, 2, "Timer1"});
+  timer_manager->AddTimer(Timer{600, 10, "Timer2"});
 
   char str[128];
   // メッセージ処理ループ
@@ -145,10 +145,10 @@ extern "C" void KernelMainNewStack(
       usb::xhci::ProcessEvents();
       break;
     case Message::kTimerTimeout:
-      printk("Timer: timeout = %lu, value = %d\n",
-        msg.arg.timer.timeout, msg.arg.timer.value);
+      printk("Timer: timeout = %lu, value = %d, description = %s\n",
+        msg.arg.timer.timeout, msg.arg.timer.value, msg.arg.timer.description);
       if(msg.arg.timer.value > 0){
-        timer_manager->AddTimer(Timer(msg.arg.timer.timeout + 100, msg.arg.timer.value + 1));
+        timer_manager->AddTimer(Timer(msg.arg.timer.timeout + 100, msg.arg.timer.value + 1, msg.arg.timer.description));
       }
       break;
     default:

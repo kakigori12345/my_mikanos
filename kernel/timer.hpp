@@ -14,13 +14,15 @@ void StopLAPICTimer();
 
 class Timer {
   public:
-    Timer(unsigned long timeout, int value);
+    Timer(unsigned long timeout, int value, const char* description = "nothing");
     unsigned long Timeout() const {return timeout_;}
     int Value() const {return value_;}
+    const char* Description() const {return description_;}
 
   private:
     unsigned long timeout_;
     int value_;
+    char description_[10]; //9文字まで
 };
 
 inline bool operator<(const Timer& lhs, const Timer& rhs) {

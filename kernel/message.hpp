@@ -10,6 +10,7 @@ struct Message {
     struct {
       unsigned long timeout;
       int value;
+      char description[10];
     } timer;
   } arg;
 };
