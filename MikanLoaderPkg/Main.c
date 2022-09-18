@@ -314,15 +314,29 @@ EFI_STATUS EFIAPI UefiMain(
   }
 
 
-  // カーネルを起動
-  UINT64 entry_addr = *(UINT64*)(kernel_first_addr + 24); //24とは？→ ELF形式の仕様で決まっているっぽい（p79参照）
+  VOID* acpi_table = NULL;
+  for(UINTN i = 0; i < system_table->NumberOfTableEntries; ++i){
+    if(CompareGuid(
+        &gEfiAcpiTableGuid,
+        &system_table->ConfigurationTable[i].VendorGuid
+      )
+    )
+    {
+      acpi_table = system_table->ConfigurationTable[i].VendorTable;
+      break;
+    }
+  }
 
+
+  // カーネルを起動
   typedef void EntryPointType(
     const struct FrameBufferConfig*,
-    const struct MemoryMap*
+    const struct MemoryMap*,
+    const VOID*
   );
+  UINT64 entry_addr = *(UINT64*)(kernel_first_addr + 24); //24とは？→ ELF形式の仕様で決まっているっぽい（p79参照）
   EntryPointType* entry_point = (EntryPointType*)entry_addr;
-  entry_point(&config, &memmap);
+  entry_point(&config, &memmap, acpi_table);
 
 
 

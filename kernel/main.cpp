@@ -26,6 +26,7 @@
 #include "timer.hpp"
 #include "frame_buffer.hpp"
 #include "message.hpp"
+#include "acpi.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -87,7 +88,8 @@ alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 //----------------
 extern "C" void KernelMainNewStack(
   const FrameBufferConfig& frame_buffer_config_ref,
-  const MemoryMap& memory_map_ref
+  const MemoryMap& memory_map_ref,
+  const acpi::RSDP& acpi_table
 ) 
 {
   MemoryMap memory_map{memory_map_ref};
@@ -114,6 +116,7 @@ extern "C" void KernelMainNewStack(
 
   SetLayerUpDown();
 
+  acpi::Initialize(acpi_table);
   InitializeLAPICTimer(*main_queue);
   timer_manager->AddTimer(Timer{200, 2, "Timer1"});
   timer_manager->AddTimer(Timer{600, 10, "Timer2"});
