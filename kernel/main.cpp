@@ -98,7 +98,6 @@ extern "C" void KernelMainNewStack(
   printk("Welcome to My OS desu\n");
   SetLogLevel(kInfo);
 
-  InitializeLAPICTimer();
   InitializeSegmentation();
   InitializePaging();
   InitializeMemoryManager(memory_map);
@@ -115,15 +114,16 @@ extern "C" void KernelMainNewStack(
 
   SetLayerUpDown();
 
-  // ループ数をカウントする
-  char str[128];
-  unsigned int count = 0;
+  InitializeLAPICTimer();
 
+  char str[128];
   // メッセージ処理ループ
   while(true) {
-    // ループ数カウントを表示する
-    ++count;
-    sprintf(str, "%010u", count);
+    __asm__("cli");
+    const auto tick = timer_manager->CurrentTick();
+    __asm__("sti");
+
+    sprintf(str, "%010lu", tick);
     FillRectangle(*main_window->Writer(), {24, 28}, {8 * 10, 16}, {0xc6, 0xc6, 0xc6});
     WriteString(*main_window->Writer(), {24, 28}, str, {0,0,0});
     layer_manager->Draw(main_window_layer_id);
@@ -131,7 +131,7 @@ extern "C" void KernelMainNewStack(
     // キューからメッセージを取り出す
     __asm__("cli"); //割り込み無効化
     if(main_queue->size() == 0) {
-      __asm__("sti");
+      __asm__("sti\n\thlt");
       continue;
     }
     Message msg = main_queue->front();
