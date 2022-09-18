@@ -27,6 +27,7 @@
 #include "frame_buffer.hpp"
 #include "message.hpp"
 #include "acpi.hpp"
+#include "keyboard.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -118,8 +119,8 @@ extern "C" void KernelMainNewStack(
 
   acpi::Initialize(acpi_table);
   InitializeLAPICTimer(*main_queue);
-  timer_manager->AddTimer(Timer{200, 2, "Timer1"});
-  timer_manager->AddTimer(Timer{600, 10, "Timer2"});
+
+  InitializeKeyboard(*main_queue);
 
   char str[128];
   // メッセージ処理ループ
@@ -150,8 +151,10 @@ extern "C" void KernelMainNewStack(
     case Message::kTimerTimeout:
       printk("Timer: timeout = %lu, value = %d, description = %s\n",
         msg.arg.timer.timeout, msg.arg.timer.value, msg.arg.timer.description);
-      if(msg.arg.timer.value > 0){
-        timer_manager->AddTimer(Timer(msg.arg.timer.timeout + 100, msg.arg.timer.value + 1, msg.arg.timer.description));
+      break;
+    case Message::kKeyPush:
+      if(msg.arg.keyboard.ascii != 0) {
+        printk("%c", msg.arg.keyboard.ascii);
       }
       break;
     default:
