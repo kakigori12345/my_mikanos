@@ -142,6 +142,9 @@ extern "C" void KernelMainNewStack(
     case Message::kInterruptXHCI:
       usb::xhci::ProcessEvents();
       break;
+    case Message::kInterruptLAPICTimer:
+      printk("Timer interrput\n");
+      break;
     default:
       Log(kError, "Unknown message type: %d\n", msg.type);
     }
