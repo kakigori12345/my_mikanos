@@ -42,5 +42,8 @@ class TimerManager {
     std::deque<Message>& msg_queue_;
 };
 
-extern TimerManager* timer_manager;
 void LAPICTimerOnInterrupt();
+
+extern TimerManager* timer_manager;
+extern unsigned long lapic_timer_freq;
+const int kTimerFreq = 100;

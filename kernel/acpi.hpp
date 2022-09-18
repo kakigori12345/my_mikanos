@@ -65,5 +65,9 @@ namespace acpi {
 
   extern const FADT* fadt;
 
+
+  const uint32_t kPMTimerFreq = 3579545;
+  void WaitMilliseconds(unsigned long msec);
+
 } // namespace acpi
 
