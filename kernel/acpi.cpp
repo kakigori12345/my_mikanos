@@ -1,7 +1,6 @@
 #include "acpi.hpp"
 #include "logger.hpp"
 
-#include <cstddef>
 #include <string>
 
 /**
@@ -54,10 +53,58 @@ namespace acpi {
   }
 
   void Initialize(const RSDP& rsdp){
+    // RSDP
     if(!rsdp.IsValid()){
-      MAKE_LOG(kError, "RSDP is not valid\n");
+      MAKE_LOG(kError, "RSDP is not valid");
+      exit(1);
+    }
+
+    // XSDT
+    const XSDT& xsdt = *reinterpret_cast<const XSDT*>(rsdp.xsdt_address);
+    if(!xsdt.header.IsValid("XSDT")){
+      MAKE_LOG(kError, "XSDT is not valid");
+      exit(1);
+    }
+
+    // FADT
+    fadt = nullptr;
+    for (int i = 0; i < xsdt.Count(); ++i) {
+      const auto& entry = xsdt[i];
+      if(entry.IsValid("FACP")) {
+        fadt = reinterpret_cast<const FADT*>(&entry);
+        break;
+      }
+    }
+
+    if (fadt == nullptr) {
+      MAKE_LOG(kError, "FADT is not found");
       exit(1);
     }
   }
+
+
+  bool DescriptionHeader::IsValid(const char* expected_signature) const { 
+    if (strncmp(this->signature, expected_signature, 4) != 0) {
+      MAKE_LOG(kDebug, "invalid singnature: %.4s", this->signature);
+      return false;
+    }
+    if (auto sum = SumBytes(this, this->length); sum != 0) {
+      MAKE_LOG(kDebug, "sum of %u bytes must be 0: %d", this->length, sum);
+      return false;
+    }
+    return true;
+  }
+
+  const DescriptionHeader& XSDT::operator[](size_t i) const {
+    auto entries = reinterpret_cast<const uint64_t*>(&this->header + 1);
+    return *reinterpret_cast<const DescriptionHeader*>(entries[i]);
+  }
+
+  size_t XSDT::Count() const {
+    //        全体                  ヘッダ               一つのエントリー（アドレス）サイズ
+    return (this->header.length - sizeof(DescriptionHeader)) / sizeof(uint64_t);
+  }
+
+  const FADT* fadt;
 
 } //namespace acpi
