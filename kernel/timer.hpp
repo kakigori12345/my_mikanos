@@ -33,7 +33,7 @@ class TimerManager {
   public:
     TimerManager(std::deque<Message>& msg_queue);
     void AddTimer(const Timer& timer);
-    void Tick();
+    bool Tick();
     unsigned long CurrentTick() const {return tick_;}
     
   private:
@@ -47,3 +47,8 @@ void LAPICTimerOnInterrupt();
 extern TimerManager* timer_manager;
 extern unsigned long lapic_timer_freq;
 const int kTimerFreq = 100;
+
+// タスク用タイマ設定
+const int kTaskTimerPeriod = static_cast<int>(kTimerFreq * 0.02);
+const int kTaskTimerValue = std::numeric_limits<int>::min();
+constexpr const char* kTaskDescription = "TaskTimer";

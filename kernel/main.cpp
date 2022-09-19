@@ -29,6 +29,7 @@
 #include "message.hpp"
 #include "acpi.hpp"
 #include "keyboard.hpp"
+#include "task.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -123,19 +124,6 @@ void InputTextWindow(char c) {
   layer_manager->Draw(text_window_layer_id);
 }
 
-
-// タスク関連
-struct TaskContext {
-  uint64_t cr3, rip, rflags, reserved1; //offset 0x00
-  uint64_t cs, ss, fs, gs;              //offset 0x20
-  uint64_t rax, rbx, rcx, rdx, rdi, rsi, rsp, rbp;  //offset 0x40
-  uint64_t r8, r9, r10, r11, r12, r13, r14, r15;     //offset 0x80
-  std::array<uint8_t, 512> fxsave_area; //offset 0xc0
-} __attribute__((packed));
-
-alignas(16) TaskContext task_b_ctx, task_a_ctx;
-
-
 // タスクB
 std::shared_ptr<Window> task_b_window;
 unsigned int task_b_window_layer_id;
@@ -162,8 +150,6 @@ void TaskB(int task_id, int data) {
     FillRectangle(*task_b_window->Writer(), {24, 28}, {8*10, 16}, {0xc6, 0xc6, 0xc6});
     WriteString(*task_b_window->Writer(), {24, 28}, str, {0,0,0});
     layer_manager->Draw(task_b_window_layer_id);
-
-    SwitchContext(&task_a_ctx, &task_b_ctx);
   }
 }
 
@@ -242,13 +228,13 @@ extern "C" void KernelMainNewStack(
     memset(&task_b_ctx, 0, sizeof(task_b_ctx)); //0で初期化
     task_b_ctx.rip = reinterpret_cast<uint64_t>(TaskB); //TaskB() の先頭アドレス
     task_b_ctx.rdi = 1;   //引数1
-    task_b_ctx.rsi = 42;  //引数2
+    task_b_ctx.rsi = 43;  //引数2
 
     task_b_ctx.cr3 = GetCR3();
     task_b_ctx.rflags = 0x202;
     task_b_ctx.cs = kKernelCS;
     task_b_ctx.ss = kKernelSS;
-    task_b_ctx.rsp = (task_b_stack_end & ~0xflu) - 8; //スタック
+    task_b_ctx.rsp = (task_b_stack_end & ~0xflu) - 8; //スタック（8だけずらす意味は p321 を参照）
 
     // MXCSR のすべての例外をマスクする
     // fxsave_area 24~27 は MXCSR レジスタに対応する。
@@ -256,6 +242,7 @@ extern "C" void KernelMainNewStack(
     *reinterpret_cast<uint32_t*>(&task_b_ctx.fxsave_area[24]) = 0x1f80;
   }
 
+  InitializeTask();
 
   char str[128];
   // メッセージ処理ループ
@@ -272,8 +259,7 @@ extern "C" void KernelMainNewStack(
     // キューからメッセージを取り出す
     __asm__("cli"); //割り込み無効化
     if(main_queue->size() == 0) {
-      __asm__("sti");
-      SwitchContext(&task_b_ctx, &task_a_ctx);
+      __asm__("sti\n\thlt");
       continue;
     }
     Message msg = main_queue->front();
