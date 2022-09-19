@@ -226,28 +226,6 @@ extern "C" void KernelMainNewStack(
   __asm__("sti");
   bool textbox_cursor_visible = false;
 
-  // TaskB 用のコンテキストを作成
-  {
-    std::vector<uint64_t> task_b_stack(1024);
-    uint64_t task_b_stack_end = reinterpret_cast<uint64_t>(&task_b_stack[1024]);
-
-    memset(&task_b_ctx, 0, sizeof(task_b_ctx)); //0で初期化
-    task_b_ctx.rip = reinterpret_cast<uint64_t>(TaskB); //TaskB() の先頭アドレス
-    task_b_ctx.rdi = 1;   //引数1
-    task_b_ctx.rsi = 43;  //引数2
-
-    task_b_ctx.cr3 = GetCR3();
-    task_b_ctx.rflags = 0x202;
-    task_b_ctx.cs = kKernelCS;
-    task_b_ctx.ss = kKernelSS;
-    task_b_ctx.rsp = (task_b_stack_end & ~0xflu) - 8; //スタック（8だけずらす意味は p321 を参照）
-
-    // MXCSR のすべての例外をマスクする
-    // fxsave_area 24~27 は MXCSR レジスタに対応する。
-    // ビット12:7が全て1になっていないとなので、0b1111110000000（0x1f80）に設定する。
-    *reinterpret_cast<uint32_t*>(&task_b_ctx.fxsave_area[24]) = 0x1f80;
-  }
-
   InitializeTask();
   task_manager->NewTask().InitContext(TaskB, 45);
   task_manager->NewTask().InitContext(TaskIdle, 0xdeadbeef);

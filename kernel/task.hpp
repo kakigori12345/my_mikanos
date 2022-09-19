@@ -19,10 +19,7 @@ struct TaskContext {
   std::array<uint8_t, 512> fxsave_area; //offset 0xc0
 } __attribute__((packed));
 
-extern TaskContext task_b_ctx, task_a_ctx;
-
 void InitializeTask();
-void SwitchTask();
 
 using TaskFunc = void(uint64_t, uint64_t);
 
