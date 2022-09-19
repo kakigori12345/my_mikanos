@@ -54,9 +54,9 @@ int printk(const char* format, ...){
   return result;
 }
 
+// メインウィンドウ
 std::shared_ptr<Window> main_window;
 unsigned int main_window_layer_id;
-
 void InitializeMainWindow(PixelFormat pixel_format){
   main_window = std::make_shared<Window>(
     160, 52, pixel_format
@@ -66,15 +66,58 @@ void InitializeMainWindow(PixelFormat pixel_format){
   main_window_layer_id = layer_manager->NewLayer()
     .SetWindow(main_window)
     .SetDraggable(true)
-    .Move({500, 200})
+    .Move({200, 100})
     .ID();
 }
+
+// テキストウィンドウ
+std::shared_ptr<Window> text_window;
+unsigned int text_window_layer_id;
+void InitializeTextWindow() {
+  const int win_w = 300;
+  const int win_h = 200;
+
+  text_window = std::make_shared<Window>(
+    win_w, win_h, screen_config.pixel_format
+  );
+  DrawWindow(*text_window->Writer(), "Text Box Test");
+  DrawTextbox(*text_window->Writer(), {4, 24}, {win_w - 8, win_h - 24 - 4});
+
+  text_window_layer_id = layer_manager->NewLayer()
+    .SetWindow(text_window)
+    .SetDraggable(true)
+    .Move({200, 300})
+    .ID();
+}
+
+int text_window_index = 0;
+void InputTextWindow(char c) {
+  if(c == 0){
+    return;
+  }
+
+  auto pos = []() { return Vector2D<int>{8 + 8 * text_window_index, 24 + 6}; };
+
+  const int max_chars = (text_window->Width() - 16) / 8;
+  if(c == '\b' && text_window_index > 0){
+    --text_window_index;
+    FillRectangle(*text_window->Writer(), pos(), {8, 16}, ToColor(0xffffff));
+  }
+  else if(c >= ' ' && text_window_index < max_chars) {
+    WriteAscii(*text_window->Writer(), pos(), c, ToColor(0));
+    ++text_window_index;
+  }
+
+  layer_manager->Draw(text_window_layer_id);
+}
+
 
 void SetLayerUpDown() {
   layer_manager->UpDown(bglayer_id, 0);
   layer_manager->UpDown(console->LayerID(), 1);
   layer_manager->UpDown(main_window_layer_id, 2);
-  layer_manager->UpDown(mouse_layer_id, 3);
+  layer_manager->UpDown(mouse_layer_id, 4);
+  layer_manager->UpDown(text_window_layer_id, 3);
   layer_manager->Draw({{0, 0}, GetScreenSize()});
 
   layer_manager->PrintLayersID();
@@ -113,6 +156,7 @@ extern "C" void KernelMainNewStack(
    
   InitializeLayer(frame_buffer_config_ref);
   InitializeMainWindow(frame_buffer_config_ref.pixel_format);
+  InitializeTextWindow();
   InitializeMouse(frame_buffer_config_ref.pixel_format);
 
   SetLayerUpDown();
@@ -153,9 +197,7 @@ extern "C" void KernelMainNewStack(
         msg.arg.timer.timeout, msg.arg.timer.value, msg.arg.timer.description);
       break;
     case Message::kKeyPush:
-      if(msg.arg.keyboard.ascii != 0) {
-        printk("%c", msg.arg.keyboard.ascii);
-      }
+      InputTextWindow(msg.arg.keyboard.ascii);
       break;
     default:
       Log(kError, "Unknown message type: %d\n", msg.type);
