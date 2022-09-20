@@ -27,7 +27,7 @@ struct TaskContext {
 
 void InitializeTask();
 
-using TaskFunc = void(uint64_t, uint64_t);
+using TaskFunc = void(uint64_t, int64_t);
 class TaskManager; //前方宣言
 
 /**
