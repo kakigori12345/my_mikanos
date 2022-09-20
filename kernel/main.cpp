@@ -140,7 +140,7 @@ void InitializeTaskBWindow() {
     .ID();
 }
 
-void TaskB(uint64_t task_id, uint64_t data) {
+void TaskB(uint64_t task_id, int64_t data) {
   printk("TaskB: task_id=%d, data=%d\n", task_id, data);
   char str[128];
   int count = 0;
@@ -151,12 +151,6 @@ void TaskB(uint64_t task_id, uint64_t data) {
     WriteString(*task_b_window->Writer(), {24, 28}, str, {0,0,0});
     layer_manager->Draw(task_b_window_layer_id);
   }
-}
-
-// 適当なタスク
-void TaskIdle(uint64_t task_id, uint64_t data){
-  printk("TaskIdle: task_id:%lu, data=%lx\n", task_id, data);
-  while(true) __asm__("hlt");
 }
 
 
@@ -223,8 +217,6 @@ extern "C" void KernelMainNewStack(
     .InitContext(TaskB, 45)
     .Wakeup()
     .ID();
-  task_manager->NewTask().InitContext(TaskIdle, 0xdeadbeef).Wakeup();
-  task_manager->NewTask().InitContext(TaskIdle, 0xdeadbabe).Wakeup();
 
   usb::xhci::Initialize();
   InitializeKeyboard();

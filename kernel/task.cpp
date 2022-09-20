@@ -4,16 +4,6 @@
 #include "segment.hpp"
 
 
-namespace {
-  template <class T, class U>
-  void Erase(T& c, const U& value) {
-    auto it = std::remove(c.begin(), c.end(), value);
-    c.erase(it, c.end());
-  }
-}
-
-
-
 TaskManager* task_manager;
 
 void InitializeTask(){
@@ -91,6 +81,19 @@ std::optional<Message> Task::ReceiveMessage(){
 }
 
 
+namespace {
+  template <class T, class U>
+  void Erase(T& c, const U& value) {
+    auto it = std::remove(c.begin(), c.end(), value);
+    c.erase(it, c.end());
+  }
+
+  void TaskIdle(uint64_t task_id, int64_t data) {
+    while(true) __asm__("hlt");
+  }
+}
+
+
 /**
  * TaskManager
  */
@@ -99,8 +102,14 @@ TaskManager::TaskManager(){
   Task& task = NewTask()
     .SetLevel(current_level_)
     .SetRunning(true);
-
   running_[current_level_].push_back(&task);
+
+  // アイドルタスク登録
+  Task& idle = NewTask()
+    .InitContext(TaskIdle, 0)
+    .SetLevel(0)
+    .SetRunning(true);
+  running_[0].push_back(&idle);
 }
 
 Task& TaskManager::NewTask(){
