@@ -7,6 +7,7 @@
 #include "graphics.hpp"
 #include "window.hpp"
 #include "frame_buffer.hpp"
+#include "message.hpp"
 
 class Layer {
   public:
@@ -77,4 +78,5 @@ extern LayerManager* layer_manager;
 extern unsigned int bglayer_id;
 
 void InitializeLayer(const FrameBufferConfig& frame_buffer_config);
+void ProcessLayerMessage(const Message& msg);
 
