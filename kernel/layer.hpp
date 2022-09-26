@@ -55,16 +55,16 @@ class LayerManager {
     void UpDown(unsigned int id, int new_height);
     // レイヤを非表示にする
     void Hide(unsigned int id);
-
+    
     // 指定した座標にある最前面レイヤを探す
     // exclude_id の ID を持つレイヤは検索処理をスキップする
     Layer* FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const;
-  
+    Layer* FindLayer(unsigned int id);
+    // 現在の高さを取得
+    int GetHeight(unsigned int id);
+
   public: 
     void PrintLayersID() const;
-
-  private:
-    Layer* _FindLayer(unsigned int id);
 
   private:
     FrameBuffer* screen_{nullptr};
@@ -75,7 +75,26 @@ class LayerManager {
 };
 
 extern LayerManager* layer_manager;
-extern unsigned int bglayer_id;
+
+
+/**
+ * ActiveLayer
+ * ウィンドウをアクティブ化するクラス
+ */
+class ActiveLayer {
+  public:
+    ActiveLayer(LayerManager& manager);
+    void SetMouseLayer(unsigned int mouse_layer_id);
+    void Activate(unsigned int layer_id);
+    unsigned int GetActiveID() const { return active_layer_id_; }
+  
+  private:
+    LayerManager& manager_;
+    unsigned int active_layer_id_{0};
+    unsigned int mouse_layer_id_{0};
+};
+
+extern ActiveLayer* active_layer;
 
 void InitializeLayer(const FrameBufferConfig& frame_buffer_config);
 void ProcessLayerMessage(const Message& msg);

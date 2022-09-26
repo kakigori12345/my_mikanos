@@ -103,7 +103,7 @@ void LayerManager::Draw(unsigned int id) const{
 }
 
 void LayerManager::Move(unsigned int id, Vector2D<int> new_pos){
-  Layer* layer = _FindLayer(id);
+  Layer* layer = FindLayer(id);
   if(layer){
     const auto window_size = layer->GetWindow()->Size();
     const auto old_pos = layer->GetPosition();
@@ -112,12 +112,12 @@ void LayerManager::Move(unsigned int id, Vector2D<int> new_pos){
     Draw(id);
   }
   else{
-    MAKE_LOG(kWarn, "_FindLayer returned nullptr. id: %d", id);
+    MAKE_LOG(kWarn, "FindLayer returned nullptr. id: %d", id);
   }
 }
 
 void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff){
-  Layer* layer = _FindLayer(id);
+  Layer* layer = FindLayer(id);
   if(layer){
     const auto window_size = layer->GetWindow()->Size();
     const auto old_pos = layer->GetPosition();
@@ -126,7 +126,7 @@ void LayerManager::MoveRelative(unsigned int id, Vector2D<int> pos_diff){
     Draw(id);
   }
   else{
-    MAKE_LOG(kWarn, "_FindLayer returned nullptr. id: %d", id);
+    MAKE_LOG(kWarn, "FindLayer returned nullptr. id: %d", id);
   }
 }
 
@@ -139,7 +139,7 @@ void LayerManager::UpDown(unsigned int id, int new_height){
     new_height = layer_stack_.size();
   }
   
-  auto layer = _FindLayer(id);
+  auto layer = FindLayer(id);
   auto old_pos = std::find(layer_stack_.begin(), layer_stack_.end(), layer);
   auto new_pos = layer_stack_.begin() + new_height;
 
@@ -159,7 +159,7 @@ void LayerManager::UpDown(unsigned int id, int new_height){
 }
 
 void LayerManager::Hide(unsigned int id){
-  auto layer = _FindLayer(id);
+  auto layer = FindLayer(id);
   auto pos = std::find(layer_stack_.begin(), layer_stack_.end(), layer);
   if(pos != layer_stack_.end()) {
     layer_stack_.erase(pos);
@@ -196,7 +196,7 @@ void LayerManager::PrintLayersID() const{
   Log(kInfo, "\n");
 }
 
-Layer* LayerManager::_FindLayer(unsigned int id){
+Layer* LayerManager::FindLayer(unsigned int id){
   auto pred = [id](const std::unique_ptr<Layer>&elem) {
     return elem->ID() == id;
   };
@@ -209,16 +209,63 @@ Layer* LayerManager::_FindLayer(unsigned int id){
 }
 
 LayerManager* layer_manager;
-unsigned int bglayer_id;
 
+int LayerManager::GetHeight(unsigned int id) {
+  for (int h = 0; h < layer_stack_.size(); ++h) {
+    if (layer_stack_[h]->ID() == id) {
+      return h;
+    }
+  }
+  return -1;
+}
+
+
+/**
+ * ActiveLayer
+ */
+ActiveLayer* active_layer;
+
+ActiveLayer::ActiveLayer(LayerManager& manager)
+  : manager_{manager}
+{
+}
+
+void ActiveLayer::SetMouseLayer(unsigned int mouse_layer_id){
+  mouse_layer_id_ = mouse_layer_id;
+}
+
+void ActiveLayer::Activate(unsigned int layer_id){
+  if(active_layer_id_ == layer_id) {
+    return;
+  }
+
+  if(active_layer_id_ > 0) {
+    Layer* layer = manager_.FindLayer(layer_id);
+    layer->GetWindow()->Deactivate();
+    manager_.Draw(active_layer_id_);
+  }
+
+  active_layer_id_ = layer_id;
+  if(active_layer_id_ > 0){
+    Layer* layer = manager_.FindLayer(active_layer_id_);
+    layer->GetWindow()->Activate();
+    manager_.UpDown(active_layer_id_, manager_.GetHeight(mouse_layer_id_) - 1);
+    manager_.Draw(active_layer_id_);
+  }
+}
+
+
+
+/**
+ * 汎用関数
+ */
 namespace {
-  std::shared_ptr<Window> bgwindow;
-  FrameBuffer screen;
+  FrameBuffer* screen;
 }
 
 void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
   // バックグラウンドレイヤ
-  bgwindow = std::make_shared<Window>(
+  auto bgwindow = std::make_shared<Window>(
     GetScreenSize().x, GetScreenSize().y, frame_buffer_config.pixel_format
   );
   DrawDesktop(*bgwindow->Writer());
@@ -230,14 +277,15 @@ void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
   console->SetWindow(console_window);
 
   // レイヤマネージャー
-  if(auto err = screen.Initialize(frame_buffer_config)){
+  screen = new FrameBuffer;
+  if(auto err = screen->Initialize(frame_buffer_config)){
     MAKE_LOG(kError, "failed to initialize frame buffer.\n");
   }
   layer_manager = new LayerManager;
-  layer_manager->SetWriter(&screen);
+  layer_manager->SetWriter(screen);
 
 
-  bglayer_id = layer_manager->NewLayer()
+  auto bglayer_id = layer_manager->NewLayer()
     .SetWindow(bgwindow)
     .Move({0, 0})
     .ID();
@@ -246,6 +294,11 @@ void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
     .SetWindow(console_window)
     .Move({0, 0})
     .ID());
+
+  layer_manager->UpDown(bglayer_id, 0);
+  layer_manager->UpDown(console->LayerID(), 1);
+
+  active_layer = new ActiveLayer(*layer_manager);
 }
 
 void ProcessLayerMessage(const Message& msg){
@@ -262,4 +315,4 @@ void ProcessLayerMessage(const Message& msg){
       break;
   }
 }
-
+  
