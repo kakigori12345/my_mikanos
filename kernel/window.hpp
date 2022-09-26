@@ -19,8 +19,8 @@ class Window{
           window_.Write(pos, c);
         }
         // 関連付けられた Window の横幅・高さをピクセル単位で返す
-        int Width() const override { return window_.Width(); }
-        int Height() const override { return window_.Height(); }
+        virtual int Width() const override { return window_.Width(); }
+        virtual int Height() const override { return window_.Height(); }
 
       private:
         Window& window_;

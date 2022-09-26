@@ -6,7 +6,6 @@ const int kMouseCursorWidth = 15;
 const int kMouseCursorHeight = 24;
 const PixelColor kMouseTransparentColor{0, 0, 1};
 
-void InitializeMouse(PixelFormat pixel_format);
 void DrawMouseCursor(PixelWriter* pixel_writer, Vector2D<int> position);
 
 class Mouse {
@@ -25,3 +24,5 @@ class Mouse {
     unsigned int drag_layer_id_{0};
     uint8_t previous_buttons_{0};
 };
+
+void InitializeMouse(PixelFormat pixel_format);

@@ -107,9 +107,9 @@ void InputTextWindow(char c) {
     return;
   }
 
-  auto pos = []() { return Vector2D<int>{8 + 8 * text_window_index, 6}; };
+  auto pos = []() { return Vector2D<int>{4 + 8 * text_window_index, 6}; };
 
-  const int max_chars = (text_window->Width() - 8) / 8 - 1;
+  const int max_chars = (text_window->InnerSize().x - 8) / 8 - 1;
   if(c == '\b' && text_window_index > 0){
     DrawTextCursor(false); //前書いたカーソルを消す
     --text_window_index;
@@ -144,7 +144,7 @@ void InitializeTaskBWindow() {
 }
 
 void TaskB(uint64_t task_id, int64_t data) {
-  printk("TaskB: task_id=%d, data=%d\n", task_id, data);
+  printk("TaskB: task_id=%lu, data=%lu\n", task_id, data);
   char str[128];
   int count = 0;
 
@@ -216,17 +216,14 @@ extern "C" void KernelMainNewStack(
   InitializeTextWindow();
   InitializeTaskBWindow();
   layer_manager->Draw({{0, 0}, GetScreenSize()});
-  active_layer->Activate(task_b_window_layer_id);
-
+  
   acpi::Initialize(acpi_table);
   InitializeLAPICTimer();
 
   // カーソル点滅用タイマの生成
   const int kTextboxCursorTimer = 1;
   const int kTimer05sec = static_cast<int>(kTimerFreq * 0.5);
-  __asm__("cli");
   timer_manager->AddTimer(Timer{kTimer05sec, kTextboxCursorTimer, "ForCursor"});
-  __asm__("sti");
   bool textbox_cursor_visible = false;
 
   InitializeTask();
@@ -239,6 +236,8 @@ extern "C" void KernelMainNewStack(
   usb::xhci::Initialize();
   InitializeKeyboard();
   InitializeMouse(frame_buffer_config_ref.pixel_format);
+
+  active_layer->Activate(task_b_window_layer_id);
 
 
   char str[128];

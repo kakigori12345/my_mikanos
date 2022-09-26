@@ -53,7 +53,7 @@ class Task {
   private:
     Task& SetLevel(int level) { level_ = level; return *this; }
     Task& SetRunning(bool running) { is_running_ = running; return *this; }
-    unsigned int Level() const { return level_; }
+    int Level() const { return level_; }
     bool IsRunning() const { return is_running_; }
 
   private:

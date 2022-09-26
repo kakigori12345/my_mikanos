@@ -235,12 +235,13 @@ void ActiveLayer::SetMouseLayer(unsigned int mouse_layer_id){
 }
 
 void ActiveLayer::Activate(unsigned int layer_id){
+  MAKE_LOG(kInfo, "activate: %d", layer_id);
   if(active_layer_id_ == layer_id) {
     return;
   }
 
   if(active_layer_id_ > 0) {
-    Layer* layer = manager_.FindLayer(layer_id);
+    Layer* layer = manager_.FindLayer(active_layer_id_);
     layer->GetWindow()->Deactivate();
     manager_.Draw(active_layer_id_);
   }
@@ -298,7 +299,7 @@ void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
   layer_manager->UpDown(bglayer_id, 0);
   layer_manager->UpDown(console->LayerID(), 1);
 
-  active_layer = new ActiveLayer(*layer_manager);
+  active_layer = new ActiveLayer{*layer_manager};
 }
 
 void ProcessLayerMessage(const Message& msg){

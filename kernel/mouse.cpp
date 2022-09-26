@@ -33,29 +33,6 @@ namespace {
 }
 
 
-void InitializeMouse(PixelFormat pixel_format){
-  auto mouse_window = std::make_shared<Window>(
-    kMouseCursorWidth, kMouseCursorHeight, pixel_format
-  );
-  mouse_window->SetTransparentColor(kMouseTransparentColor);
-  DrawMouseCursor(mouse_window->Writer(), {0, 0});
-
-  auto mouse_layer_id = layer_manager->NewLayer()
-    .SetWindow(mouse_window)
-    .ID();
-  
-  auto mouse = std::make_shared<Mouse>(mouse_layer_id);
-  mouse->SetPosition({200, 200});
-  layer_manager->UpDown(mouse->LayerID(), std::numeric_limits<int>::max());
-
-  usb::HIDMouseDriver::default_observer = 
-    [mouse](uint8_t buttons, int8_t displacement_x, uint8_t displacement_y) {
-      mouse->OnInterrupt(buttons, displacement_x, displacement_y);
-    };
-
-  active_layer->SetMouseLayer(mouse_layer_id);
-}
-
 void DrawMouseCursor(PixelWriter* pixel_writer, Vector2D<int> position) {
   for(int dy = 0; dy < kMouseCursorHeight; ++dy){
     for(int dx = 0; dx < kMouseCursorWidth; ++dx) {
@@ -121,4 +98,27 @@ void Mouse::OnInterrupt(uint8_t buttons, int8_t displacement_x, int8_t displacem
   }
 
   previous_buttons_ = buttons;
+}
+
+void InitializeMouse(PixelFormat pixel_format){
+  auto mouse_window = std::make_shared<Window>(
+    kMouseCursorWidth, kMouseCursorHeight, pixel_format
+  );
+  mouse_window->SetTransparentColor(kMouseTransparentColor);
+  DrawMouseCursor(mouse_window->Writer(), {0, 0});
+
+  auto mouse_layer_id = layer_manager->NewLayer()
+    .SetWindow(mouse_window)
+    .ID();
+  
+  auto mouse = std::make_shared<Mouse>(mouse_layer_id);
+  mouse->SetPosition({200, 200});
+  layer_manager->UpDown(mouse->LayerID(), std::numeric_limits<int>::max());
+
+  usb::HIDMouseDriver::default_observer = 
+    [mouse](uint8_t buttons, int8_t displacement_x, int8_t displacement_y) {
+      mouse->OnInterrupt(buttons, displacement_x, displacement_y);
+    };
+
+  active_layer->SetMouseLayer(mouse_layer_id);
 }
