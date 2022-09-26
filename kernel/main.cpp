@@ -30,6 +30,7 @@
 #include "acpi.hpp"
 #include "keyboard.hpp"
 #include "task.hpp"
+#include "terminal.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -226,10 +227,15 @@ extern "C" void KernelMainNewStack(
   timer_manager->AddTimer(Timer{kTimer05sec, kTextboxCursorTimer, "ForCursor"});
   bool textbox_cursor_visible = false;
 
+  // タスク
   InitializeTask();
   Task& main_task = task_manager->CurrentTask();
   const uint64_t taskb_id = task_manager->NewTask()
     .InitContext(TaskB, 45)
+    .Wakeup()
+    .ID();
+  const uint64_t task_terminal_id = task_manager->NewTask()
+    .InitContext(TaskTerminal, 0)
     .Wakeup()
     .ID();
 
@@ -274,6 +280,11 @@ extern "C" void KernelMainNewStack(
         textbox_cursor_visible = !textbox_cursor_visible;
         DrawTextCursor(textbox_cursor_visible);
         layer_manager->Draw(text_window_layer_id);
+
+        //ターミナル
+        __asm__("cli");
+        task_manager->SendMessage(task_terminal_id, *msg);
+        __asm__("sti");
       }
       break;
     case Message::kKeyPush:
