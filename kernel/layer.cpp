@@ -235,6 +235,7 @@ int LayerManager::GetHeight(unsigned int id) {
  * ActiveLayer
  */
 ActiveLayer* active_layer;
+std::map<unsigned int, uint64_t>* layer_task_map;
 
 ActiveLayer::ActiveLayer(LayerManager& manager)
   : manager_{manager}
@@ -311,6 +312,8 @@ void InitializeLayer(const FrameBufferConfig& frame_buffer_config){
   layer_manager->UpDown(console->LayerID(), 1);
 
   active_layer = new ActiveLayer{*layer_manager};
+
+  layer_task_map = new std::map<unsigned int, uint64_t>;
 }
 
 void ProcessLayerMessage(const Message& msg){
