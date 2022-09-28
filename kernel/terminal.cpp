@@ -19,6 +19,8 @@ Terminal::Terminal(){
     .SetWindow(window_)
     .SetDraggable(true)
     .ID();
+
+  Print(">");
 }
 
 Rectangle<int> Terminal::BlinkCursor(){
@@ -38,13 +40,14 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode, char ascii)
     linebuf_[linebuf_index_] = 0;
     linebuf_index_ = 0;
     cursor_.x = 0;
-    Log(kInfo, "line: %s\n", &linebuf_[0]);
     if(cursor_.y < kRows - 1) {
       ++cursor_.y;
     }
     else {
       _ScrollOne();
     }
+    _ExecuteLine();
+    Print(">");
     draw_area.pos = ToplevelWindow::kTopLeftMargin;
     draw_area.size = window_->InnerSize();
   }
@@ -74,6 +77,40 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode, char ascii)
   return draw_area;
 }
 
+void Terminal::Print(const char* s){
+  _DrawCursor(false);
+
+  auto newline = [this]() {
+    cursor_.x = 0;
+    if(cursor_.y < kRows - 1){
+      ++cursor_.y;
+    }
+    else {
+      _ScrollOne();
+    }
+  };
+
+  while(*s) {
+    if(*s == '\n'){
+      newline();
+    }
+    else {
+      WriteAscii(*window_->Writer(), _CalcCursorPos(), *s, {255, 255, 255});
+      if(cursor_.x == kColumns - 1) {
+        //右端に達してるので改行
+        newline();
+      }
+      else {
+        ++cursor_.x;
+      }
+    }
+
+    ++s;
+  }
+
+  _DrawCursor(true);
+}
+
 void Terminal::_DrawCursor(bool visible){
   const auto color = visible ? ToColor(0xffffff) : ToColor(0);
   FillRectangle(*window_->Writer(), _CalcCursorPos(), {7,15}, color);
@@ -92,6 +129,28 @@ void Terminal::_ScrollOne(){
   window_->Move(ToplevelWindow::kTopLeftMargin + Vector2D<int>{4, 4}, move_src);
   FillRectangle(*window_->InnerWriter(),
     {4, 4+16*cursor_.y}, {8*kColumns, 16}, {0,0,0});
+}
+
+void Terminal::_ExecuteLine(){
+  char* command = &linebuf_[0];
+
+  // スペースがあればそこで区切る
+  char* first_arg = strchr(&linebuf_[0], ' ');
+  if(first_arg) {
+    *first_arg = 0;
+    ++first_arg; //command に対する引数を指すようにする
+  }
+
+  if(strcmp(command, "echo") == 0) {
+    if(first_arg) {
+      Print(first_arg);
+    }
+    Print("\n");
+  } else if(command[0] != 0){
+    Print("no such command: ");
+    Print(command);
+    Print("\n");
+  }
 }
 
 

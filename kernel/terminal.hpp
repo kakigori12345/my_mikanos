@@ -19,6 +19,7 @@ class Terminal {
     unsigned int LayerID() const { return layer_id_; }
     Rectangle<int> BlinkCursor();
     Rectangle<int> InputKey(uint8_t modifier, uint8_t keycode, char ascii);
+    void Print(const char* s);
 
   private:
     std::shared_ptr<ToplevelWindow> window_;
@@ -32,6 +33,7 @@ class Terminal {
     int linebuf_index_{0};
     std::array<char, kLineMax> linebuf_{};
     void _ScrollOne();
+    void _ExecuteLine();
 };
 
 /**
