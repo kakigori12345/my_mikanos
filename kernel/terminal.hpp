@@ -9,6 +9,7 @@
 
 #include <memory>
 #include <array>
+#include <deque>
 
 class Terminal {
   public:
@@ -34,6 +35,10 @@ class Terminal {
     std::array<char, kLineMax> linebuf_{};
     void _ScrollOne();
     void _ExecuteLine();
+
+    std::deque<std::array<char, kLineMax>> cmd_history_{};
+    int cmd_history_index_{-1}; //-1は履歴を辿ってない状態を表す
+    Rectangle<int> _HistoryUpDown(int direction);
 };
 
 /**
