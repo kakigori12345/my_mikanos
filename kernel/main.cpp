@@ -136,7 +136,8 @@ alignas(16) uint8_t kernel_main_stack[1024 * 1024];
 extern "C" void KernelMainNewStack(
   const FrameBufferConfig& frame_buffer_config_ref,
   const MemoryMap& memory_map_ref,
-  const acpi::RSDP& acpi_table
+  const acpi::RSDP& acpi_table,
+  void* volume_image
 ) 
 {
   MemoryMap memory_map{memory_map_ref};
@@ -181,6 +182,25 @@ extern "C" void KernelMainNewStack(
   InitializeKeyboard();
   InitializeMouse(frame_buffer_config_ref.pixel_format);
 
+
+  //ボリュームイメージを表示する
+  {
+    uint8_t* p = reinterpret_cast<uint8_t*>(volume_image);
+    printk("Volume Image:\n");
+    for(int i = 0; i < 16; ++i) {
+      printk("%04x:", i * 16);
+      for(int j = 0; j < 8; ++j) {
+        printk(" %02x", *p);
+        ++p;
+      }
+      printk(" ");
+      for(int j = 0; j < 8; ++j) {
+        printk(" %02x", *p);
+        ++p;
+      }
+      printk("\n");
+    }
+  }
 
   char str[128];
   // メッセージ処理ループ
