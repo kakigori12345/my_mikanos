@@ -31,6 +31,7 @@
 #include "keyboard.hpp"
 #include "task.hpp"
 #include "terminal.hpp"
+#include "fat.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -153,7 +154,7 @@ extern "C" void KernelMainNewStack(
   InitializeMemoryManager(memory_map);
 
   InitializeInterrupt();
-
+  fat::Initialize(volume_image);
   InitializePCI();
      
   InitializeLayer(frame_buffer_config_ref);
