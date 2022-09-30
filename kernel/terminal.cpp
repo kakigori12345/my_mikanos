@@ -94,6 +94,15 @@ Rectangle<int> Terminal::InputKey(uint8_t modifier, uint8_t keycode, char ascii)
 void Terminal::Print(const char* s){
   _DrawCursor(false);
 
+  while(*s) {
+    Print(*s);
+    ++s;
+  }
+
+  _DrawCursor(true);
+}
+
+void Terminal::Print(char c){
   auto newline = [this]() {
     cursor_.x = 0;
     if(cursor_.y < kRows - 1){
@@ -104,25 +113,19 @@ void Terminal::Print(const char* s){
     }
   };
 
-  while(*s) {
-    if(*s == '\n'){
+  if(c == '\n'){
+    newline();
+  }
+  else {
+    WriteAscii(*window_->Writer(), _CalcCursorPos(), c, {255, 255, 255});
+    if(cursor_.x == kColumns - 1) {
+      //右端に達してるので改行
       newline();
     }
     else {
-      WriteAscii(*window_->Writer(), _CalcCursorPos(), *s, {255, 255, 255});
-      if(cursor_.x == kColumns - 1) {
-        //右端に達してるので改行
-        newline();
-      }
-      else {
-        ++cursor_.x;
-      }
+      ++cursor_.x;
     }
-
-    ++s;
   }
-
-  _DrawCursor(true);
 }
 
 void Terminal::_DrawCursor(bool visible){
@@ -208,6 +211,33 @@ void Terminal::_ExecuteLine(){
         sprintf(s, "%s\n", base);
       }
       Print(s);
+    }
+  }
+  else if(strcmp(command, "cat") == 0) {
+    char s[64];
+
+    auto file_entry = fat::FindFile(first_arg);
+    if(!file_entry) {
+      sprintf(s, "no such file: %s\n", first_arg);
+      Print(s);
+    }
+    else {
+      auto cluster = file_entry->FirstCluster();
+      auto remain_bytes = file_entry->file_size;
+
+      _DrawCursor(true);
+      while(cluster != 0 && cluster != fat::kEnfOfClusterchain) {
+        char* p = fat::GetSectorByCluster<char>(cluster);
+
+        int i = 0;
+        for(; i < fat::bytes_per_cluster && i < remain_bytes; ++i) {
+          Print(*p);
+          ++p;
+        }
+        remain_bytes -= i;
+        cluster = fat::NextCluster(cluster);
+      }
+      _DrawCursor(false);
     }
   }
   else if(command[0] != 0){

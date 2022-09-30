@@ -12,6 +12,11 @@
 
 namespace fat {
 
+// 定数
+static const unsigned long kEnfOfClusterchain = 0x0ffffffflu;
+
+
+
 struct BPB {
   uint8_t jump_boot[3];
   char oem_name[8];
@@ -73,6 +78,7 @@ struct DirectoryEntry {
 } __attribute__((packed));
 
 extern BPB* boot_volume_image;
+extern unsigned long bytes_per_cluster;
 void Initialize(void* volume_image);
 
 /** @brief 指定されたクラスタの先頭セクタが置いてあるメモリアドレスを返す。
@@ -102,5 +108,11 @@ T* GetSectorByCluster(unsigned long cluster) {
  * @param ext  拡張子（4 バイト以上の配列）
  */
 void ReadName(const DirectoryEntry& entry, char* base, char* ext);
+
+unsigned long NextCluster(unsigned long cluster);
+
+DirectoryEntry* FindFile(const char* name, unsigned long directory_cluster = 0);
+
+bool NameIsEqual(const DirectoryEntry& entry, const char* name);
 
 } // namespace fat
