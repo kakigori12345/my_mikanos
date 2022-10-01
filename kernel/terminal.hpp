@@ -6,6 +6,7 @@
 
 #include "window.hpp"
 #include "graphics.hpp"
+#include "fat.hpp"
 
 #include <memory>
 #include <array>
@@ -36,6 +37,7 @@ class Terminal {
     std::array<char, kLineMax> linebuf_{};
     void _ScrollOne();
     void _ExecuteLine();
+    void _ExecuteFile(const fat::DirectoryEntry& file_entry);
 
     std::deque<std::array<char, kLineMax>> cmd_history_{};
     int cmd_history_index_{-1}; //-1は履歴を辿ってない状態を表す
