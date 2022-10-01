@@ -5,8 +5,39 @@
 #include "logger.hpp"
 #include "font.hpp"
 #include "pci.hpp"
+#include "elf.hpp"
 
 #include <vector>
+
+namespace {
+
+  std::vector<char*> MakeArgVector(char* command, char* first_arg) {
+    std::vector<char*> argv;
+    argv.push_back(command);
+
+    char* p = first_arg;
+    while(true){
+      while(isspace(p[0])) {
+        ++p;
+      }
+      if(p[0] == 0){
+        break;
+      }
+      argv.push_back(p);
+
+      while(p[0] != 0 && !isspace(p[0])) {
+        ++p;
+      }
+      if(p[0] == 0) {
+        break;
+      }
+      p[0] = 0;
+      ++p;
+    }
+    return argv;
+  }
+
+} //namespace
 
 
 Terminal::Terminal(){
@@ -249,12 +280,14 @@ void Terminal::_ExecuteLine(){
       Print("\n");
     }
     else {
-      _ExecuteFile(*file_entry);
+      _ExecuteFile(*file_entry, command, first_arg);
     }
   }
 }
 
-void Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry){
+void Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* command, char* first_arg){
+  Log(kInfo, "_ExecuteFile do\n");
+
   auto cluster = file_entry.FirstCluster();
   auto remain_bytes = file_entry.file_size;
 
@@ -270,9 +303,30 @@ void Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry){
     cluster = fat::NextCluster(cluster);
   }
 
-  using Func = void ();
-  auto f = reinterpret_cast<Func*>(&file_buf[0]);
-  f();
+  auto elf_header = reinterpret_cast<Elf64_Ehdr*>(&file_buf[0]);
+  if(memcmp(elf_header->e_ident, "\x7f" "ELF", 4) != 0) {
+    // フラットバイナリ形式で実行する
+    Log(kInfo, "Flat binary exe do\n");
+    using Func = void ();
+    auto f = reinterpret_cast<Func*>(&file_buf[0]);
+    f();
+    return;
+  }
+
+  // ELF 形式で実行する
+  Log(kInfo, "Elf binary exe do\n");
+  auto argv = MakeArgVector(command, first_arg);
+
+  auto entry_addr = elf_header->e_entry;
+  entry_addr += reinterpret_cast<uintptr_t>(&file_buf[0]);
+
+  using Func = int(int, char**);
+  auto f = reinterpret_cast<Func*>(entry_addr);
+  auto ret = f(argv.size(), &argv[0]);
+
+  char s[64];
+  sprintf(s, "app exited. ret = %d\n", ret);
+  Print(s);
 }
 
 Rectangle<int> Terminal::_HistoryUpDown(int direction){
