@@ -1,5 +1,8 @@
 #include <cstring>
 #include <cstdlib>
+#include <cstdint>
+
+#include "../../kernel/logger.hpp"
 
 /**
  * 計算用スタック
@@ -18,6 +21,8 @@ void Push(long value) {
   stack[stack_ptr] = value;
 }
 
+extern "C" int64_t SyscallLogString(LogLevel, const char*);
+
 extern "C" int main(int argc, char** argv) {
   stack_ptr = -1;
 
@@ -27,22 +32,26 @@ extern "C" int main(int argc, char** argv) {
       long b = Pop();
       long a = Pop();
       Push(a+b);
+      SyscallLogString(kWarn, "+");
     }
     else if(strcmp(argv[i], "-") == 0){
       long b = Pop();
       long a = Pop();
       Push(a-b);
+      SyscallLogString(kWarn, "-");
     }
     //数値はスタックにプッシュ
     else {
       long a = atol(argv[i]);
       Push(a);
+      SyscallLogString(kWarn, "#");
     }
   }
 
   if(stack_ptr < 0) {
     return 0;
   }
+  SyscallLogString(kWarn, "\nhello, this is rpn\n");
   while(1); //例外を阻止するために一時的に無限ループさせる
   //return static_cast<int>(Pop());
 }

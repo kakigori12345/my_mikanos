@@ -32,6 +32,7 @@
 #include "task.hpp"
 #include "terminal.hpp"
 #include "fat.hpp"
+#include "syscall.hpp"
 
 #include "usb/memory.hpp"
 #include "usb/device.hpp"
@@ -147,7 +148,7 @@ extern "C" void KernelMainNewStack(
   InitializeConsole();
 
   printk("Welcome to My OS desu\n");
-  SetLogLevel(kInfo);
+  SetLogLevel(kWarn);
 
   InitializeSegmentation();
   InitializePaging();
@@ -171,6 +172,8 @@ extern "C" void KernelMainNewStack(
   timer_manager->AddTimer(Timer{kTimer05sec, kTextboxCursorTimer, "ForCursor"});
   bool textbox_cursor_visible = false;
 
+  InitializeSyscall();
+
   // タスク
   InitializeTask();
   Task& main_task = task_manager->CurrentTask();
@@ -182,26 +185,6 @@ extern "C" void KernelMainNewStack(
   usb::xhci::Initialize();
   InitializeKeyboard();
   InitializeMouse(frame_buffer_config_ref.pixel_format);
-
-
-  //ボリュームイメージを表示する
-  {
-    uint8_t* p = reinterpret_cast<uint8_t*>(volume_image);
-    printk("Volume Image:\n");
-    for(int i = 0; i < 16; ++i) {
-      printk("%04x:", i * 16);
-      for(int j = 0; j < 8; ++j) {
-        printk(" %02x", *p);
-        ++p;
-      }
-      printk(" ");
-      for(int j = 0; j < 8; ++j) {
-        printk(" %02x", *p);
-        ++p;
-      }
-      printk("\n");
-    }
-  }
 
   char str[128];
   // メッセージ処理ループ

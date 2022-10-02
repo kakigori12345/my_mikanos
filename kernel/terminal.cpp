@@ -524,7 +524,7 @@ Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* comman
   }
   
   auto entry_addr = elf_header->e_entry; //LoadElf()でページングした位置を取得してるから
-  CallApp(argc.value, argv, 3<<3|3, 4<<3|3, entry_addr, stack_frame_addr.value + 4096 - 8);
+  CallApp(argc.value, argv, 4<<3|3, 3<<3|3, entry_addr, stack_frame_addr.value + 4096 - 8);
 
   // 現状アプリからは戻ってこないので戻り値表示はしない
   // char s[64];
