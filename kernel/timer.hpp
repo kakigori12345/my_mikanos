@@ -41,8 +41,6 @@ class TimerManager {
     std::priority_queue<Timer> timers_{};
 };
 
-void LAPICTimerOnInterrupt();
-
 extern TimerManager* timer_manager;
 extern unsigned long lapic_timer_freq;
 const int kTimerFreq = 100;

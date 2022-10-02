@@ -117,31 +117,13 @@ Task& TaskManager::NewTask(){
   return *tasks_.emplace_back(new Task{latest_id_});
 }
 
-void TaskManager::SwitchTask(bool current_sleep){
-  auto& level_queue = running_[current_level_];
-  Task* current_task = level_queue.front();
-  level_queue.pop_front();
-  if(!current_sleep) {
-    level_queue.push_back(current_task);
+void TaskManager::SwitchTask(const TaskContext& current_ctx){
+  TaskContext& task_ctx = task_manager->CurrentTask().Context();
+  memcpy(&task_ctx, &current_ctx, sizeof(TaskContext));
+  Task* current_task = _RotateCurrentRunQueue(false);
+  if(&CurrentTask() != current_task) {
+    RestoreContext(&CurrentTask().Context());
   }
-  if(level_queue.empty()){
-    //現在実行中のレベルのランキューが空になったので実行レベルを更新する必要がある
-    is_level_changed_ = true;
-  }
-
-  if(is_level_changed_) {
-    is_level_changed_ = false;
-    for(int lv = kMaxLevel; lv >= 0; --lv) {
-      if(!running_[lv].empty()){
-        current_level_ = lv;
-        break;
-      }
-    }
-  }
-
-  Task* next_task = running_[current_level_].front();
-
-  SwitchContext(&next_task->Context(), &current_task->Context());
 }
 
 void TaskManager::Sleep(Task* task){
@@ -153,7 +135,8 @@ void TaskManager::Sleep(Task* task){
 
   //現在実行中のタスクならタスクを切り替える
   if(task == running_[current_level_].front()){
-    SwitchTask(true);
+    Task* current_task = _RotateCurrentRunQueue(true);
+    SwitchContext(&CurrentTask().Context(), &current_task->Context());
     return;
   }
 
@@ -242,4 +225,28 @@ void TaskManager::_ChangeLevelRunning(Task* task, int level){
     current_level_ = level;
     is_level_changed_ = true; //実行レベルが下がったのでより優先度の高いタスクに切り替える
   }
+}
+
+Task* TaskManager::_RotateCurrentRunQueue(bool current_sleep) {
+  auto& level_queue = running_[current_level_];
+  Task* current_task = level_queue.front();
+  level_queue.pop_front();
+  if (!current_sleep) {
+    level_queue.push_back(current_task);
+  }
+  if (level_queue.empty()) {
+    is_level_changed_ = true;
+  }
+
+  if (is_level_changed_) {
+    is_level_changed_ = false;
+    for (int lv = kMaxLevel; lv >= 0; --lv) {
+      if (!running_[lv].empty()) {
+        current_level_ = lv;
+        break;
+      }
+    }
+  }
+
+  return current_task;
 }

@@ -77,7 +77,7 @@ class TaskManager {
 
     TaskManager();
     Task& NewTask();
-    void SwitchTask(bool current_sleep = false);
+    void SwitchTask(const TaskContext& current_ctx);
 
   public:
     void Sleep(Task* task);
@@ -92,6 +92,7 @@ class TaskManager {
 
   private:
     void _ChangeLevelRunning(Task* task, int level);
+    Task* _RotateCurrentRunQueue(bool current_sleep);
 
   private:
     std::vector<std::unique_ptr<Task>> tasks_{};
