@@ -81,3 +81,5 @@ class BitmapMemoryManager {
 Error InitializeHeap(BitmapMemoryManager& memory_managr);
 
 void InitializeMemoryManager(const MemoryMap& memory_map);
+
+extern BitmapMemoryManager* memory_manager;

@@ -37,7 +37,7 @@ class Terminal {
     std::array<char, kLineMax> linebuf_{};
     void _ScrollOne();
     void _ExecuteLine();
-    void _ExecuteFile(const fat::DirectoryEntry& file_entry, char* command, char* first_arg);
+    Error _ExecuteFile(const fat::DirectoryEntry& file_entry, char* command, char* first_arg);
 
     std::deque<std::array<char, kLineMax>> cmd_history_{};
     int cmd_history_index_{-1}; //-1は履歴を辿ってない状態を表す

@@ -29,7 +29,10 @@ class Error {
     kNoPCIMSI,
     kUnknownPixelFormat,
     kNoSuchTask,
-    kLastOfCode,
+    kInvalidFormat,
+    kFrameTooSmall,
+
+    kLastOfCode
   };
 
  private:
@@ -57,6 +60,8 @@ class Error {
     "kNoWaiter",
     "kUnknownPixelFormat",
     "kNoSuchTask",
+    "kInvalidFormat",
+    "kFrameTooSmall",
   };
   static_assert(Error::Code::kLastOfCode == code_names_.size());
 

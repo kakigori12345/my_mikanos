@@ -90,8 +90,8 @@ Error InitializeHeap(BitmapMemoryManager& memory_manager) {
 
 namespace {
   char memory_manager_buf[sizeof(BitmapMemoryManager)];
-  BitmapMemoryManager* memory_manager{nullptr};
 }
+BitmapMemoryManager* memory_manager{nullptr};
 
 void InitializeMemoryManager(const MemoryMap& memory_map){
   // メモリ
