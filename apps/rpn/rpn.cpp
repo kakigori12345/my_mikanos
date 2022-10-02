@@ -1,10 +1,5 @@
 #include <cstring>
 #include <cstdlib>
-#include "../../kernel/graphics.hpp"
-
-auto& printk = *reinterpret_cast<int (*)(const char*, ...)>(0x000000000010b000);
-auto& fill_rect = *reinterpret_cast<decltype(FillRectangle)*>(0x000000000010c350);
-auto& scrn_writer = *reinterpret_cast<decltype(screen_writer)*>(0x000000000024e060);
 
 /**
  * 計算用スタック
@@ -32,27 +27,22 @@ extern "C" int main(int argc, char** argv) {
       long b = Pop();
       long a = Pop();
       Push(a+b);
-      printk("[%d] <- %ld\n", stack_ptr, a+b);
     }
     else if(strcmp(argv[i], "-") == 0){
       long b = Pop();
       long a = Pop();
       Push(a-b);
-      printk("[%d] <- %ld\n", stack_ptr, a- b);
     }
     //数値はスタックにプッシュ
     else {
       long a = atol(argv[i]);
       Push(a);
-      printk("[%d] <- %ld\n", stack_ptr, a);
     }
   }
-
-  // ToColor は constexpr 指定でコンパイル時にアドレスが使用されるだけ。なので使えるということだと思う。
-  fill_rect(*scrn_writer, Vector2D<int>{100, 10}, Vector2D<int>{200, 200}, ToColor(0x00ff00));
 
   if(stack_ptr < 0) {
     return 0;
   }
-  return static_cast<int>(Pop());
+  while(1); //例外を阻止するために一時的に無限ループさせる
+  //return static_cast<int>(Pop());
 }

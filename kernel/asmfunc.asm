@@ -153,6 +153,17 @@ SwitchContext:
   o64 iret
 
 
+global CallApp
+CallApp:      ; void CallApp(int argc, char** argv, uint16_t cs, uint16_t ss, uint64_t rip, uint64_t rsp);
+  push rbp
+  mov rbp, rsp
+  push rcx
+  push r9
+  push rdx
+  push r8
+  o64 retf
+  ; アプリが終了してもここには来ない。無限ループさせてるので
+
 extern kernel_main_stack;
 extern KernelMainNewStack;
 
