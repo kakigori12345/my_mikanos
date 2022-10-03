@@ -2,6 +2,7 @@
 #include "asmfunc.h"
 #include "memory_manager.hpp"
 #include "logger.hpp"
+#include "interrupt.hpp"
 
 #include <array>
 
@@ -77,16 +78,23 @@ void InitializeSegmentation(){
   SetCSSS(kKernelCS, kKernelSS);
 }
 
-void InitializeTSS(){
-  const int kRSP0Frames = 8;
-  auto [stack0, err] = memory_manager->Allocate(kRSP0Frames);
+void SetTSS(int index, uint64_t value) {
+  tss[index]      = value & 0xffffffff;
+  tss[index + 1]  = value >> 32;
+}
+
+uint64_t AllocateStackArea(int num_4kFframes) {
+  auto [stack, err] = memory_manager->Allocate(num_4kFframes);
   if(err) {
     Log(kError, "failed to allocate rsp0: %s\n", err.Name());
     exit(1);
   }
-  uint64_t rsp0 = reinterpret_cast<uint64_t>(stack0.Frame()) + kRSP0Frames * 4096;
-  tss[1] = rsp0 & 0xffffffff;
-  tss[2] = rsp0 >> 32;
+  return reinterpret_cast<uint64_t>(stack.Frame()) + num_4kFframes * 4096;
+}
+
+void InitializeTSS(){
+  SetTSS(1, AllocateStackArea(8));
+  SetTSS(7 + 2 * kISTForTimer, AllocateStackArea(8));
 
   uint64_t tss_addr = reinterpret_cast<uint64_t>(&tss[0]);
   SetSystemSegment(gdt[kTSS >> 3], DescriptorType::kTSSAvailable, 0, tss_addr & 0xffffffff, sizeof(tss)-1);

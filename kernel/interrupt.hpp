@@ -32,7 +32,7 @@ struct InterruptDescriptor {
 
 // IDT : 割り込み記述子テーブル
 extern std::array<InterruptDescriptor, 256> idt;
-
+const int kISTForTimer = 1; //index of the interrupt stack table
 
 constexpr InterruptDescriptorAttribute MakeIDTAttr(
     DescriptorType type,
