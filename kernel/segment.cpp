@@ -12,6 +12,20 @@ namespace {
   std::array<uint32_t, 26> tss;
 
   static_assert((kTSS >> 3) + 1 < gdt.size());
+
+  void SetTSS(int index, uint64_t value) {
+    tss[index]      = value & 0xffffffff;
+    tss[index + 1]  = value >> 32;
+  } 
+
+  uint64_t AllocateStackArea(int num_4kFframes) {
+    auto [stack, err] = memory_manager->Allocate(num_4kFframes);
+    if(err) {
+      Log(kError, "failed to allocate rsp0: %s\n", err.Name());
+      exit(1);
+    }
+    return reinterpret_cast<uint64_t>(stack.Frame()) + num_4kFframes * 4096;
+  }
 }
 
 
@@ -76,20 +90,6 @@ void InitializeSegmentation(){
 
   SetDSAll(kKernelDS);
   SetCSSS(kKernelCS, kKernelSS);
-}
-
-void SetTSS(int index, uint64_t value) {
-  tss[index]      = value & 0xffffffff;
-  tss[index + 1]  = value >> 32;
-}
-
-uint64_t AllocateStackArea(int num_4kFframes) {
-  auto [stack, err] = memory_manager->Allocate(num_4kFframes);
-  if(err) {
-    Log(kError, "failed to allocate rsp0: %s\n", err.Name());
-    exit(1);
-  }
-  return reinterpret_cast<uint64_t>(stack.Frame()) + num_4kFframes * 4096;
 }
 
 void InitializeTSS(){

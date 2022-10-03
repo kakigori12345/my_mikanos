@@ -7,3 +7,10 @@ SyscallLogString:
   mov r10, rcx    ; syscallによりRCXが上書きされることへの対策
   syscall
   ret
+
+global SyscallPutString
+SyscallPutString:
+  mov eax, 0x80000001
+  mov r10, rcx    ; syscallによりRCXが上書きされることへの対策
+  syscall
+  ret
