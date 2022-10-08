@@ -14,6 +14,12 @@ void InitializeTask(){
   __asm__("sti");
 }
 
+// この attribute の説明は　p534 を参照
+__attribute__((no_caller_saved_registers))
+extern "C" uint64_t GetCurrentTaskOSStackPointer() {
+  return task_manager->CurrentTask().OSStackPointer();
+}
+
 
 /**
  * Task
