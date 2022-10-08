@@ -8,6 +8,7 @@
 #include "window.hpp"
 #include "layer.hpp"
 #include "font.hpp"
+#include "timer.hpp"
 
 #include <array>
 #include <cstdint>
@@ -78,6 +79,10 @@ namespace syscall {
     __asm__("sti");
 
     return {layer_id, 0};
+  }
+
+  SYSCALL(GetCurrentTick) {
+    return {timer_manager->CurrentTick(), kTimerFreq};
   }
 
   // ウィンドウ描画関連
