@@ -56,6 +56,8 @@ class LayerManager {
     void UpDown(unsigned int id, int new_height);
     // レイヤを非表示にする
     void Hide(unsigned int id);
+
+    void RemoveLayer(unsigned int id);
     
     // 指定した座標にある最前面レイヤを探す
     // exclude_id の ID を持つレイヤは検索処理をスキップする

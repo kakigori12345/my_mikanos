@@ -86,6 +86,26 @@ namespace syscall {
     return {timer_manager->CurrentTick(), kTimerFreq};
   }
 
+  SYSCALL(CloseWindow) {
+    const unsigned int layer_id = arg1 & 0xffffffff;
+    const auto layer = layer_manager->FindLayer(layer_id);
+
+    if(layer == nullptr) {
+      return {EBADF, 0};
+    }
+
+    const auto layer_pos = layer->GetPosition();
+    const auto layer_size = layer->GetWindow()->Size();
+
+    __asm__("cli");
+    active_layer->Activate(0);
+    layer_manager->RemoveLayer(layer_id);
+    layer_manager->Draw({layer_pos, layer_size});
+    __asm__("sti");
+
+    return {0,0};
+  }
+
   // ウィンドウ描画関連
   namespace {
 
@@ -194,7 +214,7 @@ namespace syscall {
 } //namespace syscall
 
 using SyscallFuncType = syscall::Result (uint64_t, uint64_t, uint64_t, uint64_t, uint64_t, uint64_t);
-extern "C" std::array<SyscallFuncType*, 9> syscall_table{
+extern "C" std::array<SyscallFuncType*, 10> syscall_table{
   /* 0x00 */ syscall::LogString,
   /* 0x01 */ syscall::PutString,
   /* 0x02 */ syscall::Exit,
@@ -204,6 +224,7 @@ extern "C" std::array<SyscallFuncType*, 9> syscall_table{
   /* 0x06 */ syscall::GetCurrentTick,
   /* 0x07 */ syscall::WinRedraw,
   /* 0x08 */ syscall::WinDrawLine,
+  /* 0x09 */ syscall::CloseWindow,
 };
 
 void InitializeSyscall(){

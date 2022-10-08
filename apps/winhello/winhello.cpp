@@ -11,5 +11,6 @@ extern "C" void main(int argc, char** argv) {
   SyscallWinWriteString(layer_id, 24, 40, 0x00c000, "hello world 2");
   SyscallWinWriteString(layer_id, 40, 56, 0x0000c0, "hello world 3");
 
+  SyscallCloseWindow(layer_id);
   exit(0);
 }

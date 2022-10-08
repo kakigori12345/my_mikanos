@@ -4,6 +4,14 @@
 
 #include <algorithm>
 
+namespace {
+  template<class T, class U>
+  void EraseIf(T& c, const U& pred) {
+    auto it = std::remove_if(c.begin(), c.end(), pred);
+    c.erase(it, c.end());
+  }
+}//namespace
+
 //----------------
 // Layer
 //----------------
@@ -175,6 +183,15 @@ void LayerManager::Hide(unsigned int id){
   if(pos != layer_stack_.end()) {
     layer_stack_.erase(pos);
   }
+}
+
+void LayerManager::RemoveLayer(unsigned int id){
+  Hide(id);
+
+  auto pred = [id](const std::unique_ptr<Layer>& elem) {
+    return elem->ID() == id;
+  };
+  EraseIf(layers_, pred);
 }
 
 Layer* LayerManager::FindLayerByPosition(Vector2D<int> pos, unsigned int exclude_id) const{
