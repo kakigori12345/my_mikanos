@@ -10,10 +10,11 @@ extern "C" {
 
 struct AppEvent {
   enum Type {
-    kQuit,
+    kQuit,  
     kMouseMove,
     kMouseButton,
     kTimerTimeout,
+    kKeyPush,
   } type;
 
   union {
@@ -34,6 +35,13 @@ struct AppEvent {
       int value;
       char description[10];
     } timer;
+
+    struct {
+      uint8_t modifier;
+      uint8_t keycode;
+      char ascii;
+      int press; // 1: press, 0: release
+    } keypush;
 
   } arg;
 };
