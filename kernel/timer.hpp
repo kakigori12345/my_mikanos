@@ -14,14 +14,16 @@ void StopLAPICTimer();
 
 class Timer {
   public:
-    Timer(unsigned long timeout, int value, const char* description = TIMER_DESC_NOTHING_STR);
+    Timer(unsigned long timeout, int value, uint64_t task_id, const char* description = TIMER_DESC_NOTHING_STR);
     unsigned long Timeout() const {return timeout_;}
     int Value() const {return value_;}
     const char* Description() const {return description_;}
+    uint64_t TaskID() const { return task_id_; }
 
   private:
     unsigned long timeout_;
     int value_;
+    uint64_t task_id_;
     char description_[TIMER_DESC_LENGTH];
 };
 
@@ -47,5 +49,5 @@ const int kTimerFreq = 100;
 
 // タスク用タイマ設定
 const int kTaskTimerPeriod = static_cast<int>(kTimerFreq * 0.02);
-const int kTaskTimerValue = std::numeric_limits<int>::min();
+const int kTaskTimerValue = std::numeric_limits<int>::max();
 constexpr const char* kTaskDescription = "TaskTimer";

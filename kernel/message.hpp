@@ -29,7 +29,7 @@ struct Message {
     struct {
       unsigned long timeout;
       int value;
-      char description[10];
+      char description[TIMER_DESC_LENGTH];
     } timer;
 
     struct{

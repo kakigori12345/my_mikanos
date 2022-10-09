@@ -169,7 +169,7 @@ extern "C" void KernelMainNewStack(
   // カーソル点滅用タイマの生成
   const int kTextboxCursorTimer = 1;
   const int kTimer05sec = static_cast<int>(kTimerFreq * 0.5);
-  timer_manager->AddTimer(Timer{kTimer05sec, kTextboxCursorTimer, "ForCursor"});
+  timer_manager->AddTimer(Timer{kTimer05sec, kTextboxCursorTimer, 1, "ForCursor"});
   bool textbox_cursor_visible = false;
 
   InitializeSyscall();
@@ -216,7 +216,7 @@ extern "C" void KernelMainNewStack(
     case Message::kTimerTimeout:
       if(msg->arg.timer.value == kTextboxCursorTimer) {
         __asm__("cli");
-        timer_manager->AddTimer(Timer{msg->arg.timer.timeout + kTimer05sec, kTextboxCursorTimer, msg->arg.timer.description});
+        timer_manager->AddTimer(Timer{msg->arg.timer.timeout + kTimer05sec, kTextboxCursorTimer, 1, msg->arg.timer.description});
         __asm__("sti");
         textbox_cursor_visible = !textbox_cursor_visible;
         DrawTextCursor(textbox_cursor_visible);
