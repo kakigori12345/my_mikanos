@@ -9,6 +9,7 @@
 #include <memory>
 
 namespace {
+
   const char mouse_cursor_shape[kMouseCursorHeight][kMouseCursorWidth + 1] = {
     "@              ",
     "@.@            ",
@@ -32,7 +33,7 @@ namespace {
     "     @@@@@     ", 
   };
 
-  void SendMouseMessage(Vector2D<int> newpos, Vector2D<int> posdiff, uint8_t buttons){
+  void SendMouseMessage(Vector2D<int> newpos, Vector2D<int> posdiff, uint8_t buttons, uint8_t previous_buttons){
     const auto act = active_layer->GetActiveID();
     if(!act) {
       return;
@@ -44,8 +45,8 @@ namespace {
       return;
     }
 
+    const auto relpos = newpos - layer->GetPosition(); //ウィンドウに対する座標
     if(posdiff.x != 0 || posdiff.y != 0) {
-      const auto relpos = newpos - layer->GetPosition(); //ウィンドウに対する座標
       Message msg{Message::kMouseMove};
       msg.arg.mouse_move.x = relpos.x;
       msg.arg.mouse_move.y = relpos.y;
@@ -54,8 +55,23 @@ namespace {
       msg.arg.mouse_move.buttons = buttons;
       task_manager->SendMessage(task_it->second, msg);
     }
+
+    if(previous_buttons != buttons) {
+      const auto diff = previous_buttons ^ buttons;
+      for(int i = 0; i < 8; ++i) {
+        if((diff >> i) & 1) {
+          Message msg{Message::kMouseButton};
+          msg.arg.mouse_button.x = relpos.x;
+          msg.arg.mouse_button.y = relpos.y;
+          msg.arg.mouse_button.press = (buttons >> i) & 1;
+          msg.arg.mouse_button.button = i;
+          task_manager->SendMessage(task_it->second, msg);
+        }
+      }
+    }
   }
-}
+
+}//namespace
 
 
 void DrawMouseCursor(PixelWriter* pixel_writer, Vector2D<int> position) {
@@ -104,7 +120,11 @@ void Mouse::OnInterrupt(uint8_t buttons, int8_t displacement_x, int8_t displacem
     // 今押された
     auto layer = layer_manager->FindLayerByPosition(position_, layer_id_);
     if(layer && layer->IsDraggable()) {
-      drag_layer_id_ = layer->ID();
+      const auto y_layer = position_.y - layer->GetPosition().y;
+      if(y_layer < ToplevelWindow::kTopLeftMargin.y) {
+        // タイトルバーをクリックしたときだけドラッグモードに入る
+        drag_layer_id_ = layer->ID();
+      }
       active_layer->Activate(layer->ID());
     }
     else {
@@ -124,7 +144,7 @@ void Mouse::OnInterrupt(uint8_t buttons, int8_t displacement_x, int8_t displacem
 
   if(drag_layer_id_ == 0) {
     // ウィンドウドラッグ中はマウスイベントを発生させない
-    SendMouseMessage(newpos, posdiff, buttons);
+    SendMouseMessage(newpos, posdiff, buttons, previous_buttons_);
   }
 
   previous_buttons_ = buttons;
