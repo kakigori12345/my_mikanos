@@ -302,8 +302,15 @@ SyscallEntry:       ; void SyscallEntry(void);
   o64 sysret
 
 .exit:
-  mov rsp, rax  ; スタックをアプリ用からOS用に切り替える
-  mov eax, edx  ; CallApp() の戻り値を設定
+  mov rdi, rax  ; スタックをアプリ用からOS用に切り替える
+  mov esi, edx  ; CallApp() の戻り値を設定
+  jmp ExitApp
+  
+
+global ExitApp  ; void ExitApp(uint64_t rsp, int32_t ret_val);
+ExitApp:
+  mov rsp, rdi
+  mov eax, esi
 
   pop r15
   pop r14
