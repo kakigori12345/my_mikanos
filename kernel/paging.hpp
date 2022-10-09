@@ -10,6 +10,8 @@ void SetupIdentityPageTable();
 
 void InitializePaging();
 
+void ResetCR3();
+
 
 union LinearAddress4Level {
   uint64_t value;

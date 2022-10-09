@@ -232,6 +232,31 @@ namespace {
     return MAKE_ERROR(Error::kSuccess);
   }
 
+  WithError<PageMapEntry*> SetupPML4(Task& current_task) {
+    auto pml4 = NewPageMap();
+    if(pml4.error) {
+      return pml4;
+    }
+
+    // pml4 の前半だけコピーする（512 の半分なので）
+    const auto current_pml4 = reinterpret_cast<PageMapEntry*>(GetCR3());
+    memcpy(pml4.value, current_pml4, 256 * sizeof(uint64_t));
+
+    const auto cr3 = reinterpret_cast<uint64_t>(pml4.value);
+    SetCR3(cr3);
+    current_task.Context().cr3 = cr3;
+    return pml4;
+  }
+
+  Error FreePML4(Task& current_task) {
+    const auto cr3 = current_task.Context().cr3;
+    current_task.Context().cr3 = 0;
+    ResetCR3();
+
+    const FrameID frame{ cr3 / kBytesPerFrame };
+    return memory_manager->Free(frame, 1);
+  }
+
 } //namespace
 
 
@@ -524,8 +549,15 @@ Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* comman
     return MAKE_ERROR(Error::kSuccess);
   }
 
+  __asm__("cli");
+  auto& task = task_manager->CurrentTask();
+  __asm__("sti");
+
+  if(auto pml4 = SetupPML4(task); pml4.error) {
+    return pml4.error;
+  }
+
   // ELF 形式で実行する
-  Log(kInfo, "Elf binary exe do\n");
   if(auto err = LoadElf(elf_header)) {
     return err;
   }
@@ -548,10 +580,6 @@ Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* comman
     return err;
   }
   
-  __asm__("cli");
-  auto& task = task_manager->CurrentTask();
-  __asm__("sti");
-
   auto entry_addr = elf_header->e_entry; //LoadElf()でページングした位置を取得してるから
   int ret = CallApp(argc.value, argv, 3<<3|3, entry_addr, stack_frame_addr.value + 4096 - 8, &task.OSStackPointer());
 
@@ -564,7 +592,7 @@ Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* comman
     return err;
   }
 
-  return MAKE_ERROR(Error::kSuccess);
+  return FreePML4(task);
 }
 
 Rectangle<int> Terminal::_HistoryUpDown(int direction){
