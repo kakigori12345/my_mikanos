@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <cerrno>
 #include <cmath>
+#include <cstring>
 
 namespace syscall {
 

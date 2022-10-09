@@ -14,6 +14,7 @@
 #include "timer.hpp"
 
 #include <vector>
+#include <cstring>
 
 namespace {
 
