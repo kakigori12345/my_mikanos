@@ -110,9 +110,11 @@ T* GetSectorByCluster(unsigned long cluster) {
  */
 void ReadName(const DirectoryEntry& entry, char* base, char* ext);
 
+void FormatName(const DirectoryEntry& entry, char* dest);
+
 unsigned long NextCluster(unsigned long cluster);
 
-DirectoryEntry* FindFile(const char* name, unsigned long directory_cluster = 0);
+std::pair<DirectoryEntry*, bool> FindFile(const char* path, unsigned long directory_cluster = 0);
 
 bool NameIsEqual(const DirectoryEntry& entry, const char* name);
 

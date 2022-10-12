@@ -258,6 +258,34 @@ namespace {
     return memory_manager->Free(frame, 1);
   }
 
+  void ListAllEntries(Terminal* term, uint32_t dir_cluster) {
+    const auto kEntriesPerCluster = fat::bytes_per_cluster / sizeof(fat::DirectoryEntry);
+
+    while(dir_cluster != fat::kEnfOfClusterchain) {
+      auto dir = fat::GetSectorByCluster<fat::DirectoryEntry>(dir_cluster);
+
+      for(int i = 0; i < kEntriesPerCluster; ++i) {
+        if(dir[i].name[0] == 0x00) {
+          return;
+        }
+        else if(static_cast<uint8_t>(dir[i].name[0]) == 0xe5) {
+          continue;
+        }
+        else if(dir[i].attr == fat::Attribute::kLongName) {
+          continue;
+        }
+
+        char name[13];
+        fat::FormatName(dir[i], name);
+        term->Print(name);
+        term->Print("\n");
+        Log(kWarn, "%s\n", name);
+      }
+
+      dir_cluster = fat::NextCluster(dir_cluster);
+    }
+  }
+
 } //namespace
 
 
@@ -475,45 +503,51 @@ void Terminal::_ExecuteLine(){
     }
   }
   else if(strcmp(command, "ls") == 0) {
-    auto root_dir_entries = fat::GetSectorByCluster<fat::DirectoryEntry>(
-      fat::boot_volume_image->sectors_per_cluster
-    );
-    auto entries_per_cluster = 
-      fat::boot_volume_image->bytes_per_sector / sizeof(fat::DirectoryEntry)
-      * fat::boot_volume_image->sectors_per_cluster;
-    
-    char base[9], ext[4]; //NULL終端込み
-    char s[64];
-    for(int i = 0; i < entries_per_cluster; ++i) {
-      fat::ReadName(root_dir_entries[i], base, ext);
-      if(base[0] == 0x00) {
-        // 0x00: エントリが空。またこれより後にもファイルやディレクトリが存在しない
-        break;
+    if(first_arg[0] == '\0') {
+      // ルートディレクトリを表示
+      ListAllEntries(this, fat::boot_volume_image->root_cluster);
+    }
+    else {
+      auto [dir, post_slash] = fat::FindFile(first_arg);
+      if(dir == nullptr){
+        // 指定されたものが存在しない
+        Print("No such file or directory: ");
+        Print(first_arg);
+        Print("\n");
       }
-      else if(static_cast<uint8_t>(base[0]) == 0xe5){
-        // 0xE5: エントリが空
-        continue;
-      }
-      else if(root_dir_entries[i].attr == fat::Attribute::kLongName) {
-        continue;
-      }
-
-      if(ext[0]) {
-        sprintf(s, "%s.%s\n", base, ext);
+      else if(dir->attr == fat::Attribute::kDirectory) {
+        // ディレクトリ
+        ListAllEntries(this, dir->FirstCluster());
       }
       else {
-        sprintf(s, "%s\n", base);
+        // ファイルのはず
+        char name[13];
+        fat::FormatName(*dir, name);
+        if(post_slash) {
+          // ファイルなのに末尾に'/'がついている
+          Print(name);
+          Print(" is not a directory\n");
+        }
+        else {
+          Print(name);
+          Print("\n");
+        }
       }
-      Print(s);
     }
   }
   else if(strcmp(command, "cat") == 0) {
     char s[64];
 
-    auto file_entry = fat::FindFile(first_arg);
+    auto [file_entry, post_slash] = fat::FindFile(first_arg);
     if(!file_entry) {
       sprintf(s, "no such file: %s\n", first_arg);
       Print(s);
+    }
+    else if(file_entry->attr != fat::Attribute::kDirectory && post_slash) {
+      char name[13];
+      fat::FormatName(*file_entry, name);
+      Print(name);
+      Print(" is not a directory\n");
     }
     else {
       auto cluster = file_entry->FirstCluster();
@@ -540,11 +574,17 @@ void Terminal::_ExecuteLine(){
       .Wakeup();
   }
   else if(command[0] != 0){
-    auto file_entry = fat::FindFile(command);
+    auto [file_entry, post_slash] = fat::FindFile(command);
     if(!file_entry) {
       Print("no such command: ");
       Print(command);
       Print("\n");
+    }
+    else if(file_entry->attr != fat::Attribute::kDirectory && post_slash) {
+      char name[13];
+      fat::FormatName(*file_entry, name);
+      Print(name);
+      Print(" is not a directory\n");
     }
     else {
       _ExecuteFile(*file_entry, command, first_arg);
