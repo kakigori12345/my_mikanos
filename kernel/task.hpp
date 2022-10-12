@@ -7,6 +7,7 @@
 
 #include "error.hpp"
 #include "message.hpp"
+#include "fat.hpp"
 
 #include <cstdint>
 #include <array>
@@ -50,6 +51,7 @@ class Task {
     Task& Wakeup();
     void SendMessage(const Message& msg);
     std::optional<Message> ReceiveMessage();
+    std::vector<std::unique_ptr<fat::FileDescriptor>>& Files();
   
   private:
     Task& SetLevel(int level) { level_ = level; return *this; }
@@ -66,6 +68,8 @@ class Task {
 
     unsigned int level_{kDefaultLevel};
     bool is_running_{false};
+
+    std::vector<std::unique_ptr<fat::FileDescriptor>> files_{};
 };
 
 

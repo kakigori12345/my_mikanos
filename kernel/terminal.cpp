@@ -503,7 +503,7 @@ void Terminal::_ExecuteLine(){
     }
   }
   else if(strcmp(command, "ls") == 0) {
-    if(first_arg[0] == '\0') {
+    if(!first_arg || first_arg[0] == '\0') {
       // ルートディレクトリを表示
       ListAllEntries(this, fat::boot_volume_image->root_cluster);
     }
