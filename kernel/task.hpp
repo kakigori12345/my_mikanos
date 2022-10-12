@@ -51,7 +51,7 @@ class Task {
     Task& Wakeup();
     void SendMessage(const Message& msg);
     std::optional<Message> ReceiveMessage();
-    std::vector<std::unique_ptr<fat::FileDescriptor>>& Files();
+    std::vector<std::unique_ptr<::FileDescriptor>>& Files();
   
   private:
     Task& SetLevel(int level) { level_ = level; return *this; }
@@ -69,7 +69,7 @@ class Task {
     unsigned int level_{kDefaultLevel};
     bool is_running_{false};
 
-    std::vector<std::unique_ptr<fat::FileDescriptor>> files_{};
+    std::vector<std::unique_ptr<::FileDescriptor>> files_{};
 };
 
 
