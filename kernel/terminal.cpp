@@ -634,9 +634,12 @@ Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* comman
     return err;
   }
   
-  task.Files().push_back(
-    std::make_unique<TerminalFileDescriptor>(task, *this)
-  );
+  // 先頭3つを標準入出力とする
+  for(int i = 0; i < 3; ++i) {
+    task.Files().push_back(
+      std::make_unique<TerminalFileDescriptor>(task, *this)
+    );
+  }
 
   auto entry_addr = elf_header->e_entry; //LoadElf()でページングした位置を取得してるから
   int ret = CallApp(argc.value, argv, 3<<3|3, entry_addr, stack_frame_addr.value + 4096 - 8, &task.OSStackPointer());
@@ -687,8 +690,6 @@ Rectangle<int> Terminal::_HistoryUpDown(int direction){
  * 汎用関数
  */
 
-std::map<uint64_t, Terminal*>* terminals;
-
 void TaskTerminal(uint64_t task_id, int64_t data){
   const char* command_line = reinterpret_cast<char*>(data);
   const bool show_window = command_line == nullptr;
@@ -701,7 +702,6 @@ void TaskTerminal(uint64_t task_id, int64_t data){
     layer_task_map->insert(std::make_pair(terminal->LayerID(), task_id));
     active_layer->Activate(terminal->LayerID());
   }
-  (*terminals)[task_id] = terminal;
   __asm__("sti");
 
   if(command_line) {
@@ -794,9 +794,14 @@ size_t TerminalFileDescriptor::Read(void* buf, size_t len){
       }
       continue;
     }
-    
+
     bufc[0] = msg->arg.keyboard.ascii;
     term_.Print(bufc, 1);
     return 1;
   }
+}
+
+size_t TerminalFileDescriptor::Write(const void* buf, size_t len) {
+  term_.Print(reinterpret_cast<const char*>(buf), len);
+  return len;
 }
