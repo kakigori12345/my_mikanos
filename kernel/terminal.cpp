@@ -261,7 +261,7 @@ namespace {
   void ListAllEntries(Terminal* term, uint32_t dir_cluster) {
     const auto kEntriesPerCluster = fat::bytes_per_cluster / sizeof(fat::DirectoryEntry);
 
-    while(dir_cluster != fat::kEnfOfClusterchain) {
+    while(dir_cluster != fat::kEndOfClusterchain) {
       auto dir = fat::GetSectorByCluster<fat::DirectoryEntry>(dir_cluster);
 
       for(int i = 0; i < kEntriesPerCluster; ++i) {
@@ -554,7 +554,7 @@ void Terminal::_ExecuteLine(){
       auto remain_bytes = file_entry->file_size;
 
       _DrawCursor(true);
-      while(cluster != 0 && cluster != fat::kEnfOfClusterchain) {
+      while(cluster != 0 && cluster != fat::kEndOfClusterchain) {
         char* p = fat::GetSectorByCluster<char>(cluster);
 
         int i = 0;

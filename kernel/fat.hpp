@@ -16,7 +16,7 @@
 namespace fat {
 
 // 定数
-static const unsigned long kEnfOfClusterchain = 0x0ffffffflu;
+static const unsigned long kEndOfClusterchain = 0x0ffffffflu;
 
 
 

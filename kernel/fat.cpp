@@ -71,7 +71,7 @@ namespace fat {
   unsigned long NextCluster(unsigned long cluster){
     uint32_t next = GetFat()[cluster];
     if(IsEndOfClusterchain(cluster)) {
-      return kEnfOfClusterchain;
+      return kEndOfClusterchain;
     }
     return next;
   }
@@ -107,7 +107,7 @@ namespace fat {
       current = candidate;
       ++num_allocated;
     }
-    fat[current] = kEnfOfClusterchain;
+    fat[current] = kEndOfClusterchain;
     return current;
   }
 
@@ -120,7 +120,7 @@ namespace fat {
         }
       }
       auto next = NextCluster(dir_cluster);
-      if (next== kEnfOfClusterchain) {
+      if (next== kEndOfClusterchain) {
         break;
       }
       dir_cluster = next;
@@ -197,7 +197,7 @@ namespace fat {
     const auto [next_path, post_slash] = NextPathElement(path, path_elem);
     const bool path_last = next_path == nullptr || next_path[0] == '\0';
 
-    while(directory_cluster != kEnfOfClusterchain) {
+    while(directory_cluster != kEndOfClusterchain) {
       auto dir = GetSectorByCluster<DirectoryEntry>(directory_cluster);
       for(int i = 0; i < bytes_per_cluster / sizeof(DirectoryEntry); ++i) {
         if(dir[i].name[0] == 0x00) {
@@ -242,7 +242,7 @@ not_found:
 
   size_t LoadFile(void* buf, size_t len, const DirectoryEntry& entry){
     auto is_valid_cluster = [](uint32_t c) {
-      return c != 0 && c != kEnfOfClusterchain;
+      return c != 0 && c != kEndOfClusterchain;
     };
     auto cluster = entry.FirstCluster();
 
@@ -268,7 +268,7 @@ not_found:
     unsigned long first_cluster;
     for(first_cluster = 2; ; ++first_cluster) {
       if(fat[first_cluster] == 0){
-        fat[first_cluster] = kEnfOfClusterchain;
+        fat[first_cluster] = kEndOfClusterchain;
         break;
       }
     }
@@ -332,7 +332,7 @@ not_found:
     while(total < len) {
       if(wr_cluster_off_ == bytes_per_cluster) {
         const auto next_cluster = NextCluster(wr_cluster_);
-        if(next_cluster == kEnfOfClusterchain) {
+        if(next_cluster == kEndOfClusterchain) {
           // クラスタチェーンの末尾に来たので増やす
           wr_cluster_ = ExtendCluster(wr_cluster_, num_cluster(len-total));
         }
