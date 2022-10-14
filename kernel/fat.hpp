@@ -11,8 +11,8 @@
 #include <cstdint>
 #include <cstddef>
 
+#include "error.hpp"
 #include "file.hpp"
-
 namespace fat {
 
 // 定数
@@ -121,6 +121,22 @@ std::pair<DirectoryEntry*, bool> FindFile(const char* path, unsigned long direct
 bool NameIsEqual(const DirectoryEntry& entry, const char* name);
 
 size_t LoadFile(void* buf, size_t len, const DirectoryEntry& entry);
+
+bool IsEndOfClusterchain(unsigned long cluster);
+
+uint32_t* GetFat();
+
+// クラスタを伸長する
+unsigned long ExtendCluster(unsigned long eoc_cluster, size_t n);
+
+// 指定されたクラスタの空きエントリを返す。満杯なら伸長する
+DirectoryEntry* AllocateEntry(unsigned long dir_cluster);
+
+// name には基本名と拡張子をドットで結合したものを渡す
+// 例： "hoge.foo" → "HOGE    FOO"　（11文字）
+void SetFileName(DirectoryEntry& entry, const char* name);
+
+WithError<DirectoryEntry*> CreateFile(const char* path);
 
 class FileDescriptor : public ::FileDescriptor {
   public:

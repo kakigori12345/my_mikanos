@@ -32,6 +32,8 @@ class Error {
     kInvalidFormat,
     kFrameTooSmall,
     kInvalidFile,
+    kIsDirectory,
+    kNoSuchEntry,
 
     kLastOfCode
   };
@@ -64,6 +66,8 @@ class Error {
     "kInvalidFormat",
     "kFrameTooSmall",
     "kInvalidFile",
+"kIsDirectory",
+    "kNoSuchEntry",
   };
   static_assert(Error::Code::kLastOfCode == code_names_.size());
 
