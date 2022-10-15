@@ -86,7 +86,7 @@ void InitializeTextWindow() {
   const int win_h = 200;
 
   text_window = std::make_shared<ToplevelWindow>(
-    win_w, win_h, screen_config.pixel_format, "Text Box"
+    win_w, win_h, screen_config.pixel_format, "Text Box ysss"
   );
   DrawTextbox(*text_window->InnerWriter(), {0, 0}, text_window->InnerSize());
 
