@@ -33,7 +33,7 @@ class Terminal {
     Rectangle<int> BlinkCursor();
     Rectangle<int> InputKey(uint8_t modifier, uint8_t keycode, char ascii);
     void Print(const char* s, std::optional<size_t> len = std::nullopt);
-    void Print(char c);
+    void Print(char32_t c);
 
   private:
     std::shared_ptr<ToplevelWindow> window_;
