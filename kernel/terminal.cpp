@@ -171,7 +171,6 @@ namespace {
         fat::FormatName(dir[i], name);
         term->Print(name);
         term->Print("\n");
-        Log(kWarn, "%s\n", name);
       }
 
       dir_cluster = fat::NextCluster(dir_cluster);
@@ -484,7 +483,7 @@ void Terminal::_ExecuteLine(){
   }
 }
 
-Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* command, char* first_arg){
+Error Terminal::_ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char* first_arg){
   Log(kInfo, "_ExecuteFile do\n");
 
   std::vector<uint8_t> file_buf(file_entry.file_size);
@@ -537,11 +536,13 @@ Error Terminal::_ExecuteFile(const fat::DirectoryEntry& file_entry, char* comman
   const uint64_t elf_next_page = (elf_last_addr + 4095) & 0xffff'ffff'ffff'f000;
   task.SetDPagingBegin(elf_next_page);
   task.SetDPagingEnd(elf_next_page); //1ページだからBeginと同じなのかな
+  task.SetFileMapEnd(0xffff'ffff'ffff'e000); //仮想アドレスのほぼ末尾
 
   auto entry_addr = elf_header->e_entry; //LoadElf()でページングした位置を取得してるから
   int ret = CallApp(argc.value, argv, 3<<3|3, entry_addr, stack_frame_addr.value + 4096 - 8, &task.OSStackPointer());
 
   task.Files().clear();
+  task.FileMaps().clear();
 
   char s[64];
   sprintf(s, "app exited. ret = %d\n", ret);
@@ -701,4 +702,8 @@ size_t TerminalFileDescriptor::Read(void* buf, size_t len){
 size_t TerminalFileDescriptor::Write(const void* buf, size_t len) {
   term_.Print(reinterpret_cast<const char*>(buf), len);
   return len;
+}
+
+size_t TerminalFileDescriptor::Load(void* buf, size_t len, size_t offset) {
+  return 0;
 }
