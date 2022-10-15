@@ -34,6 +34,11 @@ class FrameID {
 
 static const FrameID kNullFrame{std::numeric_limits<size_t>::max()};
 
+struct MemoryStat {
+  size_t allocated_frames;
+  size_t total_frames;
+};
+
 
 // ビットマップ方式でメモリを管理するクラス
 class BitmapMemoryManager {
@@ -66,6 +71,8 @@ class BitmapMemoryManager {
     // 扱うメモリ範囲を設定。
     // この呼び出し以降、Allocate によるメモリ割り当ては設定された範囲内のみで行われる。
     void SetMemoryRange(FrameID range_begin, FrameID range_end);
+
+    MemoryStat Stat() const;
 
   private:
     std::array<MapLineType, kFrameCount / kBitsPerMapLine> alloc_map_;
