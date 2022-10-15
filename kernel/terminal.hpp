@@ -8,12 +8,20 @@
 #include "graphics.hpp"
 #include "fat.hpp"
 #include "task.hpp"
+#include "paging.hpp"
 
 #include <memory>
 #include <array>
 #include <deque>
 #include <map>
 #include <optional>
+
+struct AppLoadInfo {
+  uint64_t vaddr_end, entry;
+  PageMapEntry* pml4;
+};
+
+extern std::map<fat::DirectoryEntry*, AppLoadInfo>* app_loads;
 
 class Terminal {
   public:
