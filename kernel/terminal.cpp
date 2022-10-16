@@ -394,6 +394,17 @@ void Terminal::Print(char32_t c){
   }
 }
 
+void Terminal::RedDraw(){
+  Rectangle<int> draw_area{ToplevelWindow::kTopLeftMargin, window_->InnerSize()};
+
+  Message msg = MakeLayerMessage(
+    task_.ID(), LayerID(), LayerOperation::DrawArea, draw_area
+  );
+  __asm__("cli");
+  task_manager->SendMessage(1, msg);
+  __asm__("sti");
+}
+
 void Terminal::_DrawCursor(bool visible){
   if(show_window_) {
     const auto color = visible ? ToColor(0xffffff) : ToColor(0);
@@ -552,19 +563,13 @@ void Terminal::_ExecuteLine(){
     }
     else {
       fat::FileDescriptor fd{*file_entry};
-      char u8buf[5];
 
+      char u8buf[1024];
       _DrawCursor(true);
       while(true) {
-        if(fd.Read(&u8buf[0], 1) != 1) {
+        if(ReadDelim(fd, '\n', u8buf, sizeof(u8buf)) == 0) {
           break;
         }
-        const int u8_remain = CountUTF8Size(u8buf[0]) - 1;
-        if(u8_remain > 0 && fd.Read(&u8buf[1], u8_remain) != u8_remain) {
-          break;
-        }
-        u8buf[u8_remain + 1] = 0;
-
         PrintToFD(*files_[1], "%s", u8buf);
       }
       _DrawCursor(false);
@@ -829,12 +834,14 @@ size_t TerminalFileDescriptor::Read(void* buf, size_t len){
 
     bufc[0] = msg->arg.keyboard.ascii;
     term_.Print(bufc, 1);
+    term_.RedDraw();
     return 1;
   }
 }
 
 size_t TerminalFileDescriptor::Write(const void* buf, size_t len) {
   term_.Print(reinterpret_cast<const char*>(buf), len);
+  term_.RedDraw();
   return len;
 }
 
@@ -895,7 +902,7 @@ size_t PipeDescriptor::Write(const void* buf, size_t len) {
     __asm__("cli");
     task_.SendMessage(msg);
     __asm__("sti");
-  }
+  }  
   return len;
 }
 
