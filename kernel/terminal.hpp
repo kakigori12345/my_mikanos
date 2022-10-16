@@ -51,7 +51,7 @@ class Terminal {
     std::array<char, kLineMax> linebuf_{};
     void _ScrollOne();
     void _ExecuteLine();
-    Error _ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char* first_arg);
+    WithError<int> _ExecuteFile(fat::DirectoryEntry& file_entry, char* command, char* first_arg);
 
     std::deque<std::array<char, kLineMax>> cmd_history_{};
     int cmd_history_index_{-1}; //-1は履歴を辿ってない状態を表す
@@ -59,6 +59,7 @@ class Terminal {
 
     bool show_window_; //画面表示有無
     std::array<std::shared_ptr<FileDescriptor>, 3> files_;
+    int last_exit_code_{0};
 };
 
 /**
