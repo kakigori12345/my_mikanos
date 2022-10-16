@@ -1,9 +1,16 @@
 #include "font.hpp"
 
+#include <cstdlib>
+#include <vector>
+
+#include "fat.hpp"
+
 // hankaku.o のデータを参照
 extern const uint8_t _binary_hankaku_bin_start;
 extern const uint8_t _binary_hankaku_bin_end;
 extern const uint8_t _binary_hankaku_bin_size;
+
+namespace {
 
 const uint8_t* GetFont(char c) {
   auto index = 16 * static_cast<unsigned int>(c);
@@ -12,6 +19,34 @@ const uint8_t* GetFont(char c) {
   }
   return &_binary_hankaku_bin_start + index; //アドレスを返す
 }
+
+FT_Library ft_library;
+std::vector<uint8_t>* nihongo_buf;
+
+Error RenderUnicode(char32_t c, FT_Face face) {
+  const auto glyph_index = FT_Get_Char_Index(face, c);
+  if(glyph_index == 0) {
+    return MAKE_ERROR(Error::kFreeTypeError);
+  }
+
+  if(int err = FT_Load_Glyph(face, glyph_index, FT_LOAD_RENDER | FT_LOAD_TARGET_MONO)) {
+    return MAKE_ERROR(Error::kFreeTypeError);
+  }
+  return MAKE_ERROR(Error::kSuccess);
+}
+
+// WithError<FT_Face> NewFTFace() {
+//   FT_Face face;
+//   if(int err = FT_New_Memory_Face(ft_library, nihongo_buf->data(), nihongo_buf->size(), 0, &face)){
+//     return {face, MAKE_ERROR(Error::kFreeTypeError)};
+//   }
+//   if(int err = FT_Set_Pixel_Sizes(face, 16, 16)) {
+//     return {face, MAKE_ERROR(Error::kFreeTypeError)};
+//   }
+//   return {face, MAKE_ERROR(Error::kSuccess)};
+// }
+
+} //namespace
 
 // 1文字描画
 void WriteAscii(PixelWriter& writer, Vector2D<int> pos, char c, const PixelColor& color) {
@@ -28,6 +63,7 @@ void WriteAscii(PixelWriter& writer, Vector2D<int> pos, char c, const PixelColor
     }
   }
 }
+
 
 // 文字列描画
 void WriteString(PixelWriter& writer, Vector2D<int> pos, const char* s, const PixelColor& color){
@@ -73,15 +109,15 @@ std::pair<char32_t, int> ConvertUTF8To32(const char* u8){
       return {
         (static_cast<char32_t>(u8[0]) & 0b0000'1111) << 12 |
         (static_cast<char32_t>(u8[1]) & 0b0011'1111) << 6 |
-        (static_cast<char32_t>(u8[2]) & 0x0011'1111) << 0,
+        (static_cast<char32_t>(u8[2]) & 0b0011'1111) << 0,
         3
       };
     case 4:
       return {
         (static_cast<char32_t>(u8[0]) & 0b0000'0111) << 18 |
         (static_cast<char32_t>(u8[1]) & 0b0011'1111) << 12 |
-        (static_cast<char32_t>(u8[2]) & 0x0011'1111) << 6 |
-        (static_cast<char32_t>(u8[3]) & 0x0011'1111) << 0,
+        (static_cast<char32_t>(u8[2]) & 0b0011'1111) << 6 |
+        (static_cast<char32_t>(u8[3]) & 0b0011'1111) << 0,
         4
       };
     default:
@@ -89,17 +125,75 @@ std::pair<char32_t, int> ConvertUTF8To32(const char* u8){
   }
 }
 
+WithError<FT_Face> NewFTFace() {
+  FT_Face face;
+  if(int err = FT_New_Memory_Face(ft_library, nihongo_buf->data(), nihongo_buf->size(), 0, &face)) {
+    return {face, MAKE_ERROR(Error::kFreeTypeError)};
+  }
+  if(int err = FT_Set_Pixel_Sizes(face, 16, 16)) {
+    return {face, MAKE_ERROR(Error::kFreeTypeError)};
+  }
+  return {face, MAKE_ERROR(Error::kSuccess)};
+}
+
 bool IsHankaku(char32_t c){
   return c <= 0x7f;
 }
 
-void WriteUnicode(PixelWriter& writer, Vector2D<int> pos, char32_t c, const PixelColor& color){
+Error WriteUnicode(PixelWriter& writer, Vector2D<int> pos, char32_t c, const PixelColor& color){
   if(c <= 0x7f) {
     WriteAscii(writer, pos, c, color);
-    return;
+    return MAKE_ERROR(Error::kSuccess);
   }
 
-  // 日本語はまだ非対応なので?を表示しておく
-  WriteAscii(writer, pos, '?', color);
-  WriteAscii(writer, pos + Vector2D<int>{8,0}, '?', color);
+  auto [face, err] = NewFTFace();
+  if(err) {
+    WriteAscii(writer, pos, '?', color);
+    WriteAscii(writer, pos + Vector2D<int>{8, 0}, '?', color);
+    return err;
+  }
+  if(auto err = RenderUnicode(c, face)) {
+    FT_Done_Face(face);
+    WriteAscii(writer, pos, '?', color);
+    WriteAscii(writer, pos + Vector2D<int>{8, 0}, '?', color);
+    return err;
+  }
+  FT_Bitmap& bitmap = face->glyph->bitmap;
+
+  const int baseline = (face->height + face->descender) * face->size->metrics.y_ppem / face->units_per_EM;
+  const auto glyph_topleft = pos + Vector2D<int>{face->glyph->bitmap_left, baseline - face->glyph->bitmap_top};
+
+  for(int dy = 0; dy < bitmap.rows; ++dy) {
+    unsigned char* q = &bitmap.buffer[bitmap.pitch * dy];
+    if(bitmap.pitch < 0) {
+      q -= bitmap.pitch * bitmap.rows;
+    }
+    for(int dx = 0; dx < bitmap.width; ++dx) {
+      const bool b = q[dx >> 3] & (0x80 >> (dx & 0x7));
+      if(b) {
+        writer.Write(glyph_topleft + Vector2D<int>{dx, dy}, color);
+      }
+    }
+  }
+
+  FT_Done_Face(face);
+  return MAKE_ERROR(Error::kSuccess);
 }
+
+void InitializeFont(){
+  if(int err = FT_Init_FreeType(&ft_library)) {
+    exit(1);
+  }
+  auto [entry, pos_slash] = fat::FindFile("/nihongo.ttf");
+  if(entry == nullptr || pos_slash) {
+    exit(1);
+  }
+
+  const size_t size = entry->file_size;
+  nihongo_buf = new std::vector<uint8_t>(size);
+  if(LoadFile(nihongo_buf->data(), size, *entry) != size) {
+    delete nihongo_buf;
+    exit(1);
+  }
+}
+

@@ -157,6 +157,7 @@ extern "C" void KernelMainNewStack(
   InitializeInterrupt();
   fat::Initialize(volume_image);
   InitializePCI();
+  InitializeFont();
      
   InitializeLayer(frame_buffer_config_ref);
   InitializeMainWindow(frame_buffer_config_ref.pixel_format);
