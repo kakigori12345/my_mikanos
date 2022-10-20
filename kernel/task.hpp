@@ -14,6 +14,7 @@
 #include <vector>
 #include <memory>
 #include <deque>
+#include <map>
 #include <optional>
 
 
@@ -43,7 +44,7 @@ class Task {
     friend TaskManager;
   public:
     static const int kDefaultLevel = 1;
-    static const size_t kDefaultStackBytes = 4096;
+    static const size_t kDefaultStackBytes = 8 * 4096;
     
     Task(uint64_t id);
     Task& InitContext(TaskFunc* f, int64_t data);
@@ -56,7 +57,7 @@ class Task {
     Task& Wakeup();
     void SendMessage(const Message& msg);
     std::optional<Message> ReceiveMessage();
-    std::vector<std::unique_ptr<::FileDescriptor>>& Files();
+    std::vector<std::shared_ptr<::FileDescriptor>>& Files();
     uint64_t DPagingBegin() const;
     void SetDPagingBegin(uint64_t v);
     uint64_t DPagingEnd() const;
@@ -81,7 +82,7 @@ class Task {
     unsigned int level_{kDefaultLevel};
     bool is_running_{false};
 
-    std::vector<std::unique_ptr<::FileDescriptor>> files_{};
+    std::vector<std::shared_ptr<::FileDescriptor>> files_{};
     uint64_t dpaging_begin_{0}, dpaging_end_{0};
     uint64_t file_map_end_{0};
     std::vector<FileMapping> file_maps_{};
@@ -109,7 +110,8 @@ class TaskManager {
   public:
     Task& CurrentTask();
     Error SendMessage(uint64_t id, const Message& msg);
-  
+    void Finish(int exit_code);
+    WithError<int> WaitFinish(uint64_t task_id);
 
   private:
     void _ChangeLevelRunning(Task* task, int level);
@@ -121,6 +123,8 @@ class TaskManager {
     std::array<std::deque<Task*>, kMaxLevel + 1> running_{};
     int current_level_{kMaxLevel};
     bool is_level_changed_{false};
+    std::map<uint64_t, int> finish_tasks_{}; //key: ID of a finished task
+    std::map<uint64_t, Task*> finish_waiter_{}; //key: ID of a finished task
 };
 
 extern TaskManager* task_manager;

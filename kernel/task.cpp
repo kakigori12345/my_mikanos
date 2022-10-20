@@ -90,7 +90,7 @@ std::optional<Message> Task::ReceiveMessage(){
   return m;
 }
 
-std::vector<std::unique_ptr<::FileDescriptor>>& Task::Files(){
+std::vector<std::shared_ptr<::FileDescriptor>>& Task::Files(){
   return files_;
 }
 
@@ -237,6 +237,41 @@ Error TaskManager::SendMessage(uint64_t id, const Message& msg){
 
   (*it)->SendMessage(msg);
   return MAKE_ERROR(Error::kSuccess);
+}
+
+void TaskManager::Finish(int exit_code) {
+  Task* current_task = _RotateCurrentRunQueue(true);
+
+  const auto task_id = current_task->ID();
+  auto it = std::find_if(
+    tasks_.begin(), tasks_.end(),
+    [current_task](const auto& t) {return t.get() == current_task;}
+  );
+  tasks_.erase(it);
+
+  finish_tasks_[task_id] = exit_code;
+  if(auto it = finish_waiter_.find(task_id); it != finish_waiter_.end()) {
+    auto waiter = it->second;
+    finish_waiter_.erase(it);
+    Wakeup(waiter);
+  }
+
+  RestoreContext(&CurrentTask().Context());
+}
+
+WithError<int> TaskManager::WaitFinish(uint64_t task_id) {
+  int exit_code;
+  Task* current_task = &CurrentTask();
+  while(true) {
+    if(auto it = finish_tasks_.find(task_id); it != finish_tasks_.end()) {
+      exit_code = it->second;
+      finish_tasks_.erase(it);
+      break;
+    }
+    finish_waiter_[task_id] = current_task;
+    Sleep(current_task);
+  }
+  return {exit_code, MAKE_ERROR(Error::kSuccess)};
 }
 
 void TaskManager::_ChangeLevelRunning(Task* task, int level){

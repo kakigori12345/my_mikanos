@@ -86,7 +86,7 @@ void InitializeTextWindow() {
   const int win_h = 200;
 
   text_window = std::make_shared<ToplevelWindow>(
-    win_w, win_h, screen_config.pixel_format, "Text Box Test"
+    win_w, win_h, screen_config.pixel_format, "Text Box !"
   );
   DrawTextbox(*text_window->InnerWriter(), {0, 0}, text_window->InnerSize());
 
@@ -157,6 +157,7 @@ extern "C" void KernelMainNewStack(
   InitializeInterrupt();
   fat::Initialize(volume_image);
   InitializePCI();
+  InitializeFont();
      
   InitializeLayer(frame_buffer_config_ref);
   InitializeMainWindow(frame_buffer_config_ref.pixel_format);

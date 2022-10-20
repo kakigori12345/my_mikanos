@@ -8,6 +8,13 @@
 #include <string>
 
 
+enum class WindowRegion {
+  kTitleBar,
+  kCloseButton,
+  kBorder,
+  kOther,
+};
+
 class Window{
   public:
     // Window と関連付けられた PixelWriter を提供
@@ -54,7 +61,8 @@ class Window{
     // アクティブ化メソッド
     virtual void Activate(){}
     virtual void Deactivate(){}
-  
+    virtual WindowRegion GetWindowRegion(Vector2D<int> pos);
+
   private:
     int width_, height_;
     std::vector<std::vector<PixelColor>> data_{};
@@ -98,6 +106,7 @@ class ToplevelWindow : public Window {
 
     virtual void Activate() override;
     virtual void Deactivate() override;
+    virtual WindowRegion GetWindowRegion(Vector2D<int> pos) override;
 
     InnerAreaWriter* InnerWriter() {return &inner_writer_; }
     Vector2D<int> InnerSize() const;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include "error.hpp"
 
 class FileDescriptor {
   public:
@@ -11,3 +12,6 @@ class FileDescriptor {
 
     virtual size_t Load(void* buf, size_t len, size_t offset) = 0;
 };
+
+size_t PrintToFD(FileDescriptor& fd, const char* format, ...);
+size_t ReadDelim(FileDescriptor& fd, char delim, char* buf, size_t len);
